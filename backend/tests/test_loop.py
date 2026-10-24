@@ -283,3 +283,12 @@ class FeedbackBuilder(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RunId(unittest.TestCase):
+    def test_a_given_run_id_is_used_and_load_is_not_float_noise(self):
+        events = []
+        run, _, _ = go([intent_reply(), design_reply(1.2)], run_id="abc12345", on_event=events.append)
+        self.assertEqual(run.run_id, "abc12345")
+        self.assertEqual([e for e in events if e["type"] == "done"][0]["run_id"], "abc12345")
+        self.assertEqual([e for e in events if e["type"] == "conditions"][0]["cload_ff"], 20.0)

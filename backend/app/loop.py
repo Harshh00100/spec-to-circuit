@@ -156,8 +156,9 @@ def run_spec(
     verify: Verify,
     max_iterations: int = MAX_ITERATIONS,
     on_event: Callable[[dict[str, Any]], None] | None = None,
+    run_id: str | None = None,
 ) -> RunReport:
-    run = RunReport(run_id=uuid.uuid4().hex[:8], spec_text=text if isinstance(text, str) else "")
+    run = RunReport(run_id=run_id or uuid.uuid4().hex[:8], spec_text=text if isinstance(text, str) else "")
     emit = _emitter(on_event)
 
     def no_evidence_report(criteria: list[Criterion], why: str) -> VerificationReport:
@@ -186,7 +187,7 @@ def run_spec(
     # 2. conditions (applied by Python; unhonoured ones become unverifiable criteria)
     cond = conditions_from_intent(spec)
     criteria = list(spec.criteria) + unapplied_criteria(cond)
-    emit({"type": "conditions", "cload_ff": cond.cload_ff, "vdd": cond.vdd, "applied": cond.applied,
+    emit({"type": "conditions", "cload_ff": round(cond.cload_ff, 6), "vdd": cond.vdd, "applied": cond.applied,
           "assumed": cond.assumed, "unapplied": cond.unapplied})
 
     # 3. nothing to design or simulate?

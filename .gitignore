@@ -1,0 +1,35 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# runtime artefacts
+*.db
+*.sqlite3
+*.log
+runs/
+
+# frontend
+node_modules/
+frontend/dist/
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# local output
+*.zip
+test_runs.txt
+backend/test_runs.txt
+backend/backend/
+PROGRESS.md
+
+*.bak

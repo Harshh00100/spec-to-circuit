@@ -1,0 +1,4 @@
+pydantic>=2.6,<3
+fastapi>=0.110
+# Not added yet (need your approval): uvicorn (to serve FastAPI),
+# an HTTP client for the Token Factory call (openai SDK or httpx; stdlib urllib also works).

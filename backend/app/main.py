@@ -3,6 +3,7 @@
     python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 Endpoints
+    GET  /                        the web page (frontend/index.html)
     GET  /api/health              is ngspice found, which model is configured
     POST /api/runs                {"text": "..."} -> 202 {"run_id": "..."}   (starts a run in the background)
     GET  /api/runs                recent runs, newest first
@@ -19,7 +20,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .runs import MAX_TEXT_CHARS, RunManager
@@ -27,6 +28,7 @@ from .simulator import _resolve_cmd, run_ngspice
 from .verifier import verify
 
 _ID = re.compile(r"^[0-9a-f]{8}$")
+FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "index.html"   # <repo>/frontend/index.html
 DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]   # the Vite dev server
 
 
@@ -48,6 +50,13 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         if not _ID.match(run_id):
             raise HTTPException(status_code=404, detail="no such run")
         return manager.get(run_id)
+
+    @app.get("/", include_in_schema=False)
+    def page():
+        if not FRONTEND.is_file():
+            return HTMLResponse("<h1>Spec to Circuit</h1><p>The API is running, but frontend/index.html was not "
+                                "found next to the backend folder. See /docs for the API.</p>", status_code=404)
+        return FileResponse(FRONTEND, media_type="text/html")
 
     @app.get("/api/health")
     def health() -> dict:

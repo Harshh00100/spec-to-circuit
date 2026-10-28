@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spec to Circuit</title>
+<style>
+  :root {
+    --paper: #f3f5f8;
+    --sheet: #ffffff;
+    --ink: #121826;
+    --ink-2: #4a5468;
+    --rule: #cdd4df;
+    --rule-soft: #e4e8ef;
+    --blue: #2447d6;
+    --pass: #0b7a5b;
+    --pass-bg: #e3f3ee;
+    --fail: #c42b2b;
+    --fail-bg: #fbe8e8;
+    --warn: #96600a;
+    --warn-bg: #fbf0dc;
+    --display: Bahnschrift, "DIN Alternate", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0f141d; --sheet: #161d29; --ink: #e8ecf3; --ink-2: #9aa5b8;
+      --rule: #2b3547; --rule-soft: #212a39; --blue: #7d98ff;
+      --pass: #4fd1a5; --pass-bg: #12322a; --fail: #ff8080; --fail-bg: #3a1c1f;
+      --warn: #f0b95b; --warn-bg: #36290f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body); }
+  button, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+  .app { max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; display: grid;
+         grid-template-columns: minmax(0, 1fr) 270px; gap: 28px 32px; align-items: start; }
+  header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px;
+           border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
+  h1 { font: 700 30px/1 var(--display); letter-spacing: .01em; margin: 0; }
+  header p { margin: 0; color: var(--ink-2); }
+  main { min-width: 0; }
+  aside { min-width: 0; }
+
+  /* request */
+  .ask label { display: block; font: 600 15px var(--body); margin-bottom: 6px; }
+  .ask-row { display: flex; gap: 10px; align-items: stretch; }
+  textarea { flex: 1; min-height: 76px; resize: vertical; padding: 10px 12px; background: var(--sheet);
+             border: 1.5px solid var(--ink-2); border-radius: 3px; }
+  .go { padding: 0 22px; background: var(--blue); color: #fff; border: 0; border-radius: 3px;
+        font: 700 16px var(--display); cursor: pointer; min-width: 96px; }
+  .go[disabled] { opacity: .55; cursor: progress; }
+  .examples { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; color: var(--ink-2); font-size: 13px; }
+  .ex { background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; cursor: pointer; color: var(--ink-2); }
+  .ex:hover { border-color: var(--ink-2); color: var(--ink); }
+
+  /* verdict */
+  .verdict { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center;
+             padding: 16px 18px; background: var(--sheet); border: 1px solid var(--rule); border-left: 8px solid var(--rule); }
+  .verdict[data-state="COMPLETE"] { border-left-color: var(--pass); }
+  .verdict[data-state="FAILED"] { border-left-color: var(--fail); }
+  .verdict[data-state="INCOMPLETE"] { border-left-color: var(--warn); }
+  .verdict[data-state="running"] { border-left-color: var(--blue); }
+  .stamp { font: 700 34px/1 var(--display); letter-spacing: .04em; padding: 6px 12px; border: 3px solid currentColor; min-width: 8.5ch; text-align: center; }
+  .verdict[data-state="COMPLETE"] .stamp { color: var(--pass); }
+  .verdict[data-state="FAILED"] .stamp { color: var(--fail); }
+  .verdict[data-state="INCOMPLETE"] .stamp { color: var(--warn); }
+  .verdict[data-state="running"] .stamp { color: var(--blue); }
+  .verdict[data-state="idle"] .stamp, .verdict[data-state="none"] .stamp { color: var(--ink-2); border-style: dashed; }
+  .vtext { flex: 1; min-width: 220px; }
+  .vtext strong { display: block; font: 600 17px var(--body); }
+  .vtext span { color: var(--ink-2); font-size: 14px; }
+  .bar { height: 3px; background: var(--rule-soft); overflow: hidden; margin-top: 0; }
+  .bar i { display: block; height: 100%; width: 30%; background: var(--blue); animation: sweep 1.4s ease-in-out infinite; }
+  @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+  @media (prefers-reduced-motion: reduce) { .bar i { animation: none; width: 100%; opacity: .4; } }
+
+  h2 { font: 700 20px var(--display); margin: 30px 0 10px; letter-spacing: .01em; }
+  h2 small { font: 400 14px var(--body); color: var(--ink-2); margin-left: 8px; }
+
+  /* understood */
+  .panel { background: var(--sheet); border: 1px solid var(--rule); padding: 14px 16px; }
+  .said { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--rule); color: var(--ink-2); font-style: italic; overflow-wrap: anywhere; }
+  .crit-list { list-style: none; margin: 0; padding: 0; }
+  .crit-list li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--rule-soft); }
+  .crit-list li:first-child { border-top: 0; }
+  .tag { font: 600 12px var(--body); padding: 1px 8px; border-radius: 2px; }
+  .tag.ok { background: var(--pass-bg); color: var(--pass); }
+  .tag.no { background: var(--warn-bg); color: var(--warn); }
+  .code { font-family: var(--mono); font-size: 14px; }
+  .notes { margin: 10px 0 0; padding: 10px 0 0; border-top: 1px dashed var(--rule); list-style: none; font-size: 14px; color: var(--ink-2); }
+  .notes li { padding: 2px 0 2px 16px; position: relative; overflow-wrap: anywhere; }
+  .notes li::before { content: ""; position: absolute; left: 3px; top: .62em; width: 6px; height: 6px; background: var(--ink-2); }
+  .notes li.bad::before { background: var(--warn); }
+
+  /* attempts */
+  .attempt { background: var(--sheet); border: 1px solid var(--rule); margin-bottom: 14px; }
+  .att-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 10px 16px; border-bottom: 1px solid var(--rule); }
+  .att-head h3 { margin: 0; font: 700 18px var(--display); }
+  .att-head .dims { font: 14px var(--mono); }
+  .chip { margin-left: auto; font: 700 13px var(--display); letter-spacing: .05em; padding: 2px 10px; border: 2px solid currentColor; }
+  .chip.PASS, .chip.COMPLETE { color: var(--pass); }
+  .chip.FAIL, .chip.FAILED { color: var(--fail); }
+  .chip.UNVERIFIED, .chip.INCOMPLETE { color: var(--warn); border-style: dashed; }
+  .chip.wait { color: var(--ink-2); border-style: dotted; }
+  .modelnote { padding: 6px 16px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--rule-soft); }
+  .modelnote em { font-style: normal; font-weight: 600; }
+  .row { display: grid; grid-template-columns: minmax(200px, 1.3fr) minmax(170px, 1.3fr) minmax(120px, .8fr) 104px; gap: 8px 16px;
+         align-items: center; padding: 12px 16px; border-top: 1px solid var(--rule-soft); }
+  .row:first-of-type { border-top: 0; }
+  .row .what b { display: block; font-weight: 600; overflow-wrap: anywhere; text-wrap: balance; }
+  .row .what span { font: 13px var(--mono); color: var(--ink-2); }
+  .row .nums { font: 14px var(--mono); }
+  .row .nums b { font-size: 16px; }
+  .row .nums .margin.pos { color: var(--pass); } .row .nums .margin.neg { color: var(--fail); }
+  .row .res { justify-self: end; }
+  .row.UNVERIFIED { background-image: repeating-linear-gradient(135deg, transparent 0 7px, rgba(150, 96, 10, .12) 7px 8px); }
+  .row .why { grid-column: 1 / -1; font-size: 13px; color: var(--warn); }
+  .waiting { padding: 14px 16px; color: var(--ink-2); display: flex; gap: 10px; align-items: center; }
+
+  .gauge { position: relative; height: 34px; }
+  .gauge .track { position: absolute; left: 0; right: 0; top: 12px; height: 10px; background: var(--rule-soft); }
+  .gauge .ok { position: absolute; top: 12px; height: 10px; background: var(--pass-bg); outline: 1px solid var(--pass); outline-offset: -1px; }
+  .gauge .tick { position: absolute; top: 5px; width: 2px; height: 24px; background: var(--ink); transform: translateX(-1px); }
+  .gauge .dot { position: absolute; top: 9px; width: 16px; height: 16px; border-radius: 50%; transform: translateX(-8px); border: 3px solid var(--sheet); box-shadow: 0 0 0 1.5px currentColor; background: currentColor; }
+  .gauge.PASS .dot { color: var(--pass); } .gauge.FAIL .dot { color: var(--fail); }
+  .gauge .lbl { position: absolute; top: 27px; font: 11px var(--mono); color: var(--ink-2); transform: translateX(-50%); white-space: nowrap; }
+
+  /* calls */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 600; color: var(--ink-2); padding: 6px 10px 6px 0; border-bottom: 1.5px solid var(--ink); }
+  td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--rule-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.n, th.n { text-align: right; padding-right: 14px; }
+  .lat { display: inline-block; height: 8px; background: var(--blue); vertical-align: middle; margin-right: 6px; }
+  tfoot td { font-weight: 600; border-bottom: 0; border-top: 1.5px solid var(--ink); }
+  .scroll { overflow-x: auto; }
+
+  .fine { margin-top: 26px; color: var(--ink-2); font-size: 13px; max-width: 70ch; }
+  .err { margin-top: 14px; padding: 10px 14px; background: var(--fail-bg); border-left: 5px solid var(--fail); color: var(--ink); overflow-wrap: anywhere; }
+
+  /* history */
+  aside h2 { margin-top: 0; }
+  .hist { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+  .hist button { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 9px 4px; cursor: pointer; }
+  .hist button:hover { background: var(--sheet); }
+  .hist button[aria-current="true"] { background: var(--sheet); box-shadow: inset 4px 0 0 var(--blue); padding-left: 12px; }
+  .hist .t { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist .m { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .dot-s { width: 9px; height: 9px; display: inline-block; border: 2px solid currentColor; }
+  .dot-s.COMPLETE { color: var(--pass); background: currentColor; } .dot-s.FAILED { color: var(--fail); background: currentColor; }
+  .dot-s.INCOMPLETE { color: var(--warn); } .dot-s.run { color: var(--blue); }
+  .empty { color: var(--ink-2); font-size: 14px; padding: 10px 0; }
+
+  @media (max-width: 880px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    .row { grid-template-columns: 1fr auto; }
+    .row .what { order: 1; }
+    .row .res { order: 2; }
+    .row .nums { order: 3; grid-column: 1 / -1; }
+    .row .gauge { order: 4; grid-column: 1 / -1; }
+    .ask-row { flex-direction: column; }
+    .go { padding: 12px; }
+    .stamp { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Spec to Circuit</h1>
+    <p>Nothing is done until it is measured.</p>
+  </header>
+
+  <main>
+    <form class="ask" id="form">
+      <label for="spec">What should the circuit do?</label>
+      <div class="ask-row">
+        <textarea id="spec" maxlength="2000" placeholder="CMOS inverter, propagation delay under 40 ps at 20 fF load"></textarea>
+        <button class="go" id="go" type="submit">Verify</button>
+      </div>
+      <div class="examples" id="examples"><span>Try:</span></div>
+    </form>
+
+    <div id="msg"></div>
+    <section class="verdict" id="verdict" data-state="idle" aria-live="polite">
+      <div class="stamp" id="stamp">No run yet</div>
+      <div class="vtext"><strong id="vhead">Describe a circuit and press Verify.</strong><span id="vsub">The verdict appears here once ngspice has measured the design.</span></div>
+    </section>
+    <div class="bar" id="bar" hidden><i></i></div>
+
+    <section id="understood" hidden>
+      <h2>What I understood</h2>
+      <div class="panel" id="understood-body"></div>
+    </section>
+
+    <section id="attempts-wrap" hidden>
+      <h2>Evidence <small>each attempt is simulated, then judged by the verifier</small></h2>
+      <div id="attempts"></div>
+      <div id="run-errors"></div>
+    </section>
+
+    <section id="calls-wrap" hidden>
+      <h2>Model calls</h2>
+      <div class="panel scroll" id="calls"></div>
+    </section>
+
+    <p class="fine">Results come from ngspice with simplified Level-1 transistor models, at 1.8 V unless you state a supply. A pass means the design meets the spec in this simulation. It is not a sign-off.</p>
+  </main>
+
+  <aside>
+    <h2>History</h2>
+    <ul class="hist" id="hist"></ul>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const API = new URLSearchParams(location.search).get("api") || "";
+const $ = (id) => document.getElementById(id);
+
+/* Build DOM with textContent only: spec text and model output are never parsed as HTML. */
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "style") el.setAttribute("style", v);
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const fmt = (n) => {
+  if (n == null || !isFinite(n)) return "n/a";
+  const a = Math.abs(n);
+  if (a !== 0 && (a >= 1e5 || a < 1e-3)) return n.toExponential(2);
+  return String(Number(n.toPrecision(4)));
+};
+const OPS = { "<": "<", "<=": "≤", ">": ">", ">=": "≥" };
+const critText = (c) => c.metric ? `${c.metric} ${OPS[c.operator] || c.operator} ${fmt(c.threshold)} ${c.unit}` : "";
+const um = (x) => `${fmt(x)} µm`;
+
+/* ---------- view: turns events into the page ---------- */
+const view = {
+  attempts: {}, text: "", started: 0, timer: null, es: null, runId: null, seen: new Set(), hasReport: false,
+
+  reset(text) {
+    this.stop();
+    this.attempts = {}; this.text = text; this.hasReport = false; this.seen = new Set();
+    for (const id of ["understood", "attempts-wrap", "calls-wrap"]) $(id).hidden = true;
+    $("understood-body").replaceChildren(); $("attempts").replaceChildren();
+    $("run-errors").replaceChildren(); $("calls").replaceChildren(); $("msg").replaceChildren();
+  },
+  stop() {
+    if (this.es) { this.es.close(); this.es = null; }
+    clearInterval(this.timer); this.timer = null; $("bar").hidden = true;
+  },
+  setVerdict(state, stamp, head, sub) {
+    $("verdict").dataset.state = state; $("stamp").textContent = stamp;
+    $("vhead").textContent = head; $("vsub").textContent = sub || "";
+  },
+  running(label) {
+    this.setVerdict("running", "Checking", label || "Working on it", "");
+    $("bar").hidden = false;
+    clearInterval(this.timer);
+    this.started = this.started || Date.now();
+    const tick = () => { const s = Math.floor((Date.now() - this.started) / 1000);
+      $("vsub").textContent = `Running for ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}. Each model call can take from a few seconds to about a minute.`; };
+    tick(); this.timer = setInterval(tick, 1000);
+  },
+
+  apply(ev) {
+    switch (ev.type) {
+      case "started": this.started = Date.now(); this.running("Reading your requirement"); break;
+      case "intent": this.showIntent(ev); this.running("Designing and simulating"); break;
+      case "conditions": this.showConditions(ev); break;
+      case "design": this.showDesign(ev); break;
+      case "iteration": this.showIteration(ev); break;
+      case "error": this.showError(ev); break;
+      case "warning": this.note(ev.message, true); break;
+      case "done": break;
+      case "report": this.showReport(ev.report); break;
+    }
+  },
+
+  showIntent(ev) {
+    $("understood").hidden = false;
+    const body = $("understood-body");
+    const spec = ev.spec || {};
+    const list = h("ul", { class: "crit-list", id: "crit-list" });
+    for (const c of spec.criteria || []) {
+      list.append(c.measurable
+        ? h("li", {}, h("span", { class: "tag ok" }, "Will be measured"), h("span", { class: "code" }, critText(c)))
+        : h("li", {}, h("span", { class: "tag no" }, "Cannot be verified"), h("span", {}, c.name),
+            h("span", { style: "color:var(--ink-2);font-size:13px" }, c.unverifiable_reason || "")));
+    }
+    if (!(spec.criteria || []).length) list.append(h("li", {}, h("span", { class: "tag no" }, "Nothing to measure"), h("span", {}, "No requirement could be turned into a measurement.")));
+    body.replaceChildren(
+      h("p", { class: "said" }, this.text),
+      h("div", {}, "Circuit type: ", h("b", {}, spec.circuit_type || "unknown")),
+      list, h("ul", { class: "notes", id: "notes" }));
+    for (const n of ev.notes || []) this.note(n, false);
+    for (const q of spec.questions || []) this.note("Question: " + q.question, true);
+  },
+  note(text, bad) {
+    const ul = $("notes"); if (ul) ul.append(h("li", { class: bad ? "bad" : "" }, text));
+  },
+  showConditions(ev) {
+    if (ev.cload_ff != null && !(ev.applied || []).length && !(ev.assumed || []).length) return;
+    for (const t of ev.applied || []) this.note("Applied: " + t, false);
+    for (const t of ev.assumed || []) this.note("Assumed: " + t, true);
+    for (const t of ev.unapplied || []) this.note("Not applied: " + t, true);
+  },
+
+  attemptBlock(i) {
+    if (this.attempts[i]) return this.attempts[i];
+    $("attempts-wrap").hidden = false;
+    const head = h("div", { class: "att-head" }, h("h3", {}, `Attempt ${i}`), h("span", { class: "dims" }), h("span", { class: "chip wait" }, "Simulating"));
+    const rows = h("div", {}, h("div", { class: "waiting" }, "Waiting for ngspice…"));
+    const note = h("div", { class: "modelnote", hidden: true });
+    const box = h("article", { class: "attempt" }, head, note, rows);
+    $("attempts").append(box);
+    return (this.attempts[i] = { box, head, rows, note });
+  },
+  showDesign(ev) {
+    const a = this.attemptBlock(ev.index), d = ev.design || {}, t = d.transistors || {};
+    const mn = t.mn || {}, mp = t.mp || {};
+    a.head.querySelector(".dims").textContent = `NMOS ${um(mn.w_um)} / PMOS ${um(mp.w_um)}, L ${um(mn.l_um)}`;
+    if (d.rationale) {
+      a.note.hidden = false;
+      a.note.replaceChildren(h("em", {}, "Model's note (not evidence): "), d.rationale);
+    }
+  },
+  showIteration(ev) {
+    const a = this.attemptBlock(ev.index), rep = ev.report || {};
+    const chip = a.head.querySelector(".chip");
+    chip.className = "chip " + ev.overall; chip.textContent = ev.overall;
+    a.rows.replaceChildren(...(rep.verdicts || []).map((v) => this.row(v)));
+  },
+  row(v) {
+    const c = v.criterion || {};
+    const what = h("div", { class: "what" }, h("b", {}, c.name || critText(c)), h("span", {}, critText(c)));
+    if (v.verdict === "UNVERIFIED" || v.measured == null) {
+      return h("div", { class: "row UNVERIFIED" }, what, h("div", {}, "No measurement"), h("div", {}),
+        h("span", { class: "chip UNVERIFIED res" }, "UNVERIFIED"), h("div", { class: "why" }, v.reason || ""));
+    }
+    return h("div", { class: "row " + v.verdict }, what, this.gauge(c, v),
+      h("div", { class: "nums" }, h("b", {}, `${fmt(v.measured)} ${c.unit}`),
+        h("div", { class: "margin " + (v.margin >= 0 ? "pos" : "neg") }, `margin ${v.margin >= 0 ? "+" : "−"}${fmt(Math.abs(v.margin))} ${c.unit}`)),
+      h("span", { class: `chip ${v.verdict} res` }, v.verdict));
+  },
+  gauge(c, v) {
+    const less = c.operator === "<" || c.operator === "<=";
+    const max = Math.max(c.threshold * (less ? 2 : 1.5), v.measured * 1.1, 1e-30);
+    const pos = (x) => Math.min(100, Math.max(0, (x / max) * 100));
+    const t = pos(c.threshold);
+    const ok = less ? `left:0;width:${t}%` : `left:${t}%;width:${100 - t}%`;
+    return h("div", { class: "gauge " + v.verdict, role: "img",
+        "aria-label": `Measured ${fmt(v.measured)} ${c.unit}, limit ${critText(c)}` },
+      h("div", { class: "track" }), h("div", { class: "ok", style: ok }),
+      h("div", { class: "tick", style: `left:${t}%` }),
+      h("div", { class: "dot", style: `left:${pos(v.measured)}%` }),
+      h("div", { class: "lbl", style: `left:${Math.min(92, Math.max(8, t))}%` }, `limit ${fmt(c.threshold)}`));
+  },
+
+  showError(ev) {
+    const where = ev.stage === "server" ? "The server stopped this run" : ev.stage === "intent" ? "Could not read the requirement" : "Design step";
+    $("run-errors").append(h("div", { class: "err" }, h("b", {}, where + ": "), ev.message || ""));
+    $("attempts-wrap").hidden = false;
+    if (ev.stage === "server") {
+      this.stop();
+      this.setVerdict("none", "No verdict", "The run stopped before it finished.", "Nothing was claimed. Check the server window for details.");
+    }
+  },
+
+  showReport(rep) {
+    this.hasReport = true; this.stop();
+    const status = rep.status || "INCOMPLETE";
+    const iters = (rep.iterations || []).length, calls = rep.llm_calls || [];
+    const secs = calls.reduce((s, c) => s + (c.latency_s || 0), 0);
+    const heads = {
+      COMPLETE: "Every requirement was measured and met.",
+      FAILED: "At least one requirement was measured and not met.",
+      INCOMPLETE: iters ? "Nothing failed, but some requirements could not be verified." : "Nothing could be simulated, so nothing is verified.",
+    };
+    this.setVerdict(status, status, heads[status] || "", `${iters} ${iters === 1 ? "attempt" : "attempts"}, ${calls.length} model ${calls.length === 1 ? "call" : "calls"}, ${secs.toFixed(0)} s of model time`);
+    this.showCalls(calls);
+    refreshHistory();
+  },
+  showCalls(calls) {
+    if (!calls.length) return;
+    $("calls-wrap").hidden = false;
+    const max = Math.max(...calls.map((c) => c.latency_s || 0), 1);
+    let pt = 0, ct = 0, ts = 0;
+    const body = calls.map((c) => {
+      pt += c.prompt_tokens || 0; ct += c.completion_tokens || 0; ts += c.latency_s || 0;
+      return h("tr", {}, h("td", {}, c.purpose + (c.ok ? "" : " (failed)")), h("td", {}, c.model),
+        h("td", { class: "n" }, h("span", { class: "lat", style: `width:${Math.max(2, (c.latency_s / max) * 90)}px` }), `${(c.latency_s || 0).toFixed(1)} s`),
+        h("td", { class: "n" }, c.prompt_tokens ?? "n/a"), h("td", { class: "n" }, c.completion_tokens ?? "n/a"), h("td", { class: "n" }, c.retries ?? 0));
+    });
+    $("calls").replaceChildren(h("table", {},
+      h("thead", {}, h("tr", {}, h("th", {}, "Step"), h("th", {}, "Model"), h("th", { class: "n" }, "Latency"), h("th", { class: "n" }, "Prompt tokens"), h("th", { class: "n" }, "Reply tokens"), h("th", { class: "n" }, "Retries"))),
+      h("tbody", {}, body),
+      h("tfoot", {}, h("tr", {}, h("td", {}, "Total"), h("td", {}), h("td", { class: "n" }, `${ts.toFixed(1)} s`), h("td", { class: "n" }, pt), h("td", { class: "n" }, ct), h("td", {})))));
+  },
+
+  /* a finished run loaded from disk has a report but no live events */
+  fromReport(rep, text) {
+    this.text = text || rep.spec_text || "";
+    if (rep.intent) this.showIntent({ spec: rep.intent, notes: [] });
+    for (const it of rep.iterations || []) {
+      this.showDesign({ index: it.index, design: it.design });
+      this.showIteration({ index: it.index, overall: it.report.overall, report: it.report });
+    }
+    this.showReport(rep);
+    this.note("Loaded from saved history. Conditions and notes from the live run were not saved.", true);
+  },
+};
+
+/* ---------- talking to the server ---------- */
+const form = $("form"), go = $("go"), spec = $("spec");
+
+function problem(text) { $("msg").replaceChildren(h("div", { class: "err" }, text)); }
+function offline() {
+  problem(`Cannot reach the server${API ? " at " + API : ""}. Start it from the backend folder with: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`);
+}
+
+async function start(text) {
+  view.reset(text); go.disabled = true;
+  view.started = 0; view.running("Sending your requirement");
+  let res;
+  try {
+    res = await fetch(API + "/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+  } catch (e) { go.disabled = false; view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", ""); offline(); return; }
+  if (!res.ok) {
+    go.disabled = false; view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", "");
+    problem(res.status === 422 ? "The requirement must be between 1 and 2000 characters." : `The server refused the request (${res.status}).`); return;
+  }
+  const { run_id } = await res.json();
+  follow(run_id);
+}
+
+function follow(runId) {
+  view.runId = runId;
+  const es = new EventSource(`${API}/api/runs/${runId}/events`);
+  view.es = es;
+  const finish = () => { es.close(); if (view.es === es) view.es = null; go.disabled = false; refreshHistory(); };
+  es.onmessage = (m) => {
+    if (view.runId !== runId || view.seen.has(m.lastEventId)) return;
+    view.seen.add(m.lastEventId);
+    let ev; try { ev = JSON.parse(m.data); } catch (e) { return; }
+    view.apply(ev);
+    if (ev.type === "report" || (ev.type === "error" && ev.stage === "server")) finish();
+  };
+  es.onerror = () => {   /* the browser retries by itself; if the run is over there is nothing more to read */
+    if (view.hasReport) finish();
+  };
+}
+
+form.addEventListener("submit", (e) => { e.preventDefault(); const t = spec.value.trim(); if (t) start(t); });
+spec.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) form.requestSubmit(); });
+
+for (const t of ["CMOS inverter, propagation delay under 40 ps at 20 fF load",
+                 "CMOS inverter, propagation delay under 2 ns, and it should be low power",
+                 "CMOS inverter, output high level above 1.7 V, propagation delay under 1 ns"]) {
+  $("examples").append(h("button", { type: "button", class: "ex", onclick: () => { spec.value = t; spec.focus(); } }, t.replace("CMOS inverter, ", "")));
+}
+
+async function refreshHistory() {
+  let rows = [];
+  try { const r = await fetch(API + "/api/runs"); if (r.ok) rows = await r.json(); } catch (e) { return; }
+  const ul = $("hist"); ul.replaceChildren();
+  if (!rows.length) { ul.append(h("li", { class: "empty" }, "Finished runs appear here.")); return; }
+  for (const r of rows) {
+    const state = r.overall || (r.status === "error" ? "INCOMPLETE" : "run");
+    ul.append(h("li", {}, h("button", { type: "button", "aria-current": r.run_id === view.runId ? "true" : null, onclick: () => openRun(r) },
+      h("span", { class: "t", title: r.text }, r.text),
+      h("span", { class: "m" }, h("span", { class: "dot-s " + state }), r.overall || (r.status === "error" ? "Stopped" : r.status),
+        h("span", {}, r.created_at ? new Date(r.created_at * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "")))));
+  }
+}
+
+async function openRun(row) {
+  view.reset(row.text); spec.value = row.text; go.disabled = true; view.runId = row.run_id;
+  let data;
+  try { const r = await fetch(`${API}/api/runs/${row.run_id}`); if (!r.ok) throw 0; data = await r.json(); }
+  catch (e) { go.disabled = false; problem("Could not load that run."); return; }
+  go.disabled = false;
+  view.started = 0;
+  if (data.events && data.events.length) {
+    for (const ev of data.events) view.apply(ev);
+    if (!data.report && data.status !== "done" && data.status !== "error") { go.disabled = true; follow(row.run_id); }
+  } else if (data.report) view.fromReport(data.report, data.text);
+  else view.setVerdict("none", "No verdict", "This run has no saved result.", "");
+  refreshHistory();
+}
+
+view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", "The verdict appears here once ngspice has measured the design.");
+refreshHistory();
+</script>
+</body>
+</html>

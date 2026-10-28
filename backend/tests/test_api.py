@@ -60,6 +60,12 @@ class Api(unittest.TestCase):
         cls.server.should_exit = True
         cls.thread.join(10)
 
+    def test_0_the_page_is_served(self):
+        with urllib.request.urlopen(f"{self.base}/", timeout=15) as resp:
+            self.assertEqual(resp.status, 200)
+            self.assertIn("text/html", resp.headers["Content-Type"])
+            self.assertIn(b"Spec to Circuit", resp.read())
+
     def test_1_health(self):
         status, body = call("GET", f"{self.base}/api/health")
         self.assertEqual(status, 200)

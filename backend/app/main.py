@@ -5,7 +5,8 @@
 Endpoints
     GET  /                        the web page (frontend/index.html)
     GET  /api/health              is ngspice found, which model is configured
-    POST /api/runs                {"text": "..."} -> 202 {"run_id": "..."}   (starts a run in the background)
+    POST /api/runs                {"text": "...", "trap": false} -> 202 {"run_id": "..."}   (starts a run in the background;
+                                  trap=true injects a deliberately wrong design that claims success)
     GET  /api/runs                recent runs, newest first
     GET  /api/runs/{id}           summary, all events so far, and the final report when finished
     GET  /api/runs/{id}/events    live Server-Sent Events: replay + follow until the run ends
@@ -34,6 +35,7 @@ DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]   # the Vite de
 
 class RunRequest(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_TEXT_CHARS)
+    trap: bool = False   # trap mode: inject a wrong design that claims success; the verifier must catch it
 
 
 def create_app(manager: RunManager | None = None) -> FastAPI:
@@ -70,7 +72,7 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
 
     @app.post("/api/runs", status_code=202)
     def start_run(request: RunRequest) -> dict:
-        handle = manager.start(request.text.strip())
+        handle = manager.start(request.text.strip(), trap=request.trap)
         return {"run_id": handle.id, "status": handle.status}
 
     @app.get("/api/runs")
@@ -85,7 +87,7 @@ def create_app(manager: RunManager | None = None) -> FastAPI:
         saved = manager.load_saved(run_id)
         if saved is None:
             raise HTTPException(status_code=404, detail="no such run")
-        return {**{k: saved.get(k) for k in ("run_id", "text", "status", "overall", "created_at")},
+        return {**{k: saved.get(k) for k in ("run_id", "text", "status", "overall", "created_at", "trap")},
                 "events": [], "report": saved.get("report")}
 
     @app.get("/api/runs/{run_id}/events")

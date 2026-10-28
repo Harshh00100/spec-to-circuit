@@ -109,5 +109,24 @@ class Api(unittest.TestCase):
         self.assertIn(run_id, [r["run_id"] for r in rows])
 
 
+    def test_4_trap_flag(self):
+        self.manager._llm = FakeLLM([intent_reply()])      # a trap run needs the intent call only
+        self.assertEqual(call("POST", f"{self.base}/api/runs", {"text": "x", "trap": "banana"})[0], 422)
+        status, body = call("POST", f"{self.base}/api/runs",
+                            {"text": "CMOS inverter, delay under 40 ps at 20 fF", "trap": True})
+        self.assertEqual(status, 202)
+        run_id = body["run_id"]
+        self.assertTrue(self.manager.get(run_id).wait(30))
+        status, run = call("GET", f"{self.base}/api/runs/{run_id}")
+        self.assertEqual(status, 200)
+        self.assertTrue(run["trap"])
+        self.assertEqual(run["overall"], "FAILED")
+        designs = [e for e in run["events"] if e["type"] == "design"]
+        self.assertEqual(len(designs), 1)
+        self.assertEqual(designs[0]["trap"]["metric"], "tpd")
+        status, rows = call("GET", f"{self.base}/api/runs")
+        self.assertTrue([r for r in rows if r["run_id"] == run_id][0]["trap"])
+
+
 if __name__ == "__main__":
     unittest.main()

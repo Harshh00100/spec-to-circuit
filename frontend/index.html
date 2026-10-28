@@ -130,6 +130,49 @@
   .gauge.PASS .dot { color: var(--pass); } .gauge.FAIL .dot { color: var(--fail); }
   .gauge .lbl { position: absolute; top: 27px; font: 11px var(--mono); color: var(--ink-2); transform: translateX(-50%); white-space: nowrap; }
 
+  /* trap mode */
+  .trapopt { margin: 10px 0 0; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+  .trapopt input { margin-top: 4px; width: 16px; height: 16px; accent-color: var(--fail); }
+  .trapopt small { display: block; color: var(--ink-2); font-size: 13px; }
+  .trapflag { display: none; margin-top: 10px; padding: 7px 12px; background: var(--warn-bg); border-left: 5px solid var(--warn); font-size: 14px; }
+  .trapflag.on { display: block; }
+  .attempt.trap { border-color: var(--warn); border-style: dashed; }
+  .trapbanner { padding: 8px 16px; font-size: 13px; background: var(--warn-bg); color: var(--warn); border-bottom: 1px solid var(--rule-soft); }
+  .trapbanner b { font-weight: 700; }
+  .claimbox { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid var(--rule-soft); }
+  .claimbox > div { padding: 10px 16px; }
+  .claimbox > div + div { border-left: 1px solid var(--rule-soft); }
+  .claimbox .k { display: block; font: 600 12px var(--body); color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
+  .claimbox .v { font: 700 20px var(--display); }
+  .claimbox .claim .v { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink-2); }
+  .claimbox .claim q { display: block; font-size: 13px; color: var(--ink-2); font-style: italic; margin-top: 2px; quotes: none; overflow-wrap: anywhere; }
+  .claimbox .real.caught .v { color: var(--fail); }
+  .claimbox .real.passed .v { color: var(--pass); }
+  .caught-note { padding: 8px 16px; font-weight: 600; border-bottom: 1px solid var(--rule-soft); }
+  .caught-note.caught { background: var(--fail-bg); color: var(--fail); }
+  .caught-note.passed, .caught-note.unverified { background: var(--warn-bg); color: var(--warn); }
+  .tagtrap { font: 700 11px var(--display); letter-spacing: .06em; color: var(--warn); border: 1.5px dashed currentColor; padding: 0 5px; margin-left: 6px; }
+
+  /* circuit + netlist */
+  .circuit { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: flex-start; padding: 10px 16px; border-bottom: 1px solid var(--rule-soft); }
+  .circuit svg { width: 340px; max-width: 100%; height: auto; flex: none; }
+  .ckt line, .ckt path, .ckt circle.b { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: square; }
+  .ckt circle.dot { fill: var(--ink); stroke: none; }
+  .ckt text { fill: var(--ink-2); font: 12px var(--mono); }
+  .ckt text.strong { fill: var(--ink); font-weight: 700; }
+  .ckt text.pin { fill: var(--blue); font: 700 13px var(--display); letter-spacing: .04em; }
+  .netlist { flex: 1; min-width: 220px; font-size: 13px; }
+  .netlist summary { cursor: pointer; color: var(--blue); font-weight: 600; }
+  .netlist pre { margin: 8px 0 0; padding: 10px 12px; background: var(--paper); border: 1px solid var(--rule-soft); font: 12px/1.45 var(--mono); overflow-x: auto; max-height: 260px; }
+  .netlist .hint { color: var(--ink-2); margin: 0; }
+
+  /* results at a glance + download */
+  .cmp td.pass { color: var(--pass); font-weight: 600; } .cmp td.fail { color: var(--fail); font-weight: 600; } .cmp td.unv { color: var(--warn); }
+  .cmp td.sz { font-family: var(--mono); font-size: 13px; }
+  .dl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; color: var(--ink-2); font-size: 13px; }
+  .dl button { background: var(--sheet); border: 1.5px solid var(--ink-2); border-radius: 3px; padding: 5px 12px; cursor: pointer; font-weight: 600; }
+  .dl button:hover { border-color: var(--ink); }
+
   /* calls */
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th { text-align: left; font-weight: 600; color: var(--ink-2); padding: 6px 10px 6px 0; border-bottom: 1.5px solid var(--ink); }
@@ -165,6 +208,8 @@
     .ask-row { flex-direction: column; }
     .go { padding: 12px; }
     .stamp { font-size: 28px; }
+    .claimbox { grid-template-columns: 1fr; }
+    .claimbox > div + div { border-left: 0; border-top: 1px solid var(--rule-soft); }
   }
 </style>
 </head>
@@ -183,14 +228,23 @@
         <button class="go" id="go" type="submit">Verify</button>
       </div>
       <div class="examples" id="examples"><span>Try:</span></div>
+      <label class="trapopt" for="trap">
+        <input type="checkbox" id="trap">
+        <span>Trap mode: test the verifier with a wrong design
+          <small>The model is not asked for a design. A deliberately too-slow design is submitted with a false claim of success, and ngspice and the verifier must catch it. Needs a delay limit, such as the 40 ps example.</small></span>
+      </label>
     </form>
 
     <div id="msg"></div>
+    <div class="trapflag" id="trapflag" role="status">Trap run: the design below was planted on purpose and its claim is false. This tests the verifier. It is not a real design attempt.</div>
     <section class="verdict" id="verdict" data-state="idle" aria-live="polite">
       <div class="stamp" id="stamp">No run yet</div>
       <div class="vtext"><strong id="vhead">Describe a circuit and press Verify.</strong><span id="vsub">The verdict appears here once ngspice has measured the design.</span></div>
     </section>
     <div class="bar" id="bar" hidden><i></i></div>
+    <div class="dl" id="dl" hidden><span>Save this run as proof:</span>
+      <button type="button" id="dl-md">Report (.md)</button>
+      <button type="button" id="dl-json">Data (.json)</button></div>
 
     <section id="understood" hidden>
       <h2>What I understood</h2>
@@ -201,6 +255,11 @@
       <h2>Evidence <small>each attempt is simulated, then judged by the verifier</small></h2>
       <div id="attempts"></div>
       <div id="run-errors"></div>
+    </section>
+
+    <section id="compare-wrap" hidden>
+      <h2>Results at a glance <small>every attempt side by side</small></h2>
+      <div class="panel scroll" id="compare"></div>
     </section>
 
     <section id="calls-wrap" hidden>
@@ -248,14 +307,105 @@ const OPS = { "<": "<", "<=": "≤", ">": ">", ">=": "≥" };
 const critText = (c) => c.metric ? `${c.metric} ${OPS[c.operator] || c.operator} ${fmt(c.threshold)} ${c.unit}` : "";
 const um = (x) => `${fmt(x)} µm`;
 
+/* ---------- circuit drawing (inline SVG, built from numbers only) ---------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+function s(tag, props, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(props || {})) if (v != null) el.setAttribute(k, v);
+  for (const kid of kids) if (kid != null) el.append(typeof kid === "string" ? document.createTextNode(kid) : kid);
+  return el;
+}
+function circuitSVG(d, cond) {
+  const t = (d && d.transistors) || {}, mn = t.mn || {}, mp = t.mp || {};
+  const L = (x1, y1, x2, y2) => s("line", { x1, y1, x2, y2 });
+  const T = (x, y, text, cls) => s("text", { x, y, class: cls || "" }, String(text));
+  const load = cond && cond.cload_ff != null ? `${fmt(cond.cload_ff)} fF` : "load";
+  const vdd = cond && cond.vdd != null ? `VDD ${fmt(cond.vdd)} V` : "VDD";
+  return s("svg", { class: "ckt", viewBox: "0 0 340 214", role: "img",
+      "aria-label": `CMOS inverter: PMOS width ${um(mp.w_um)}, NMOS width ${um(mn.w_um)}, length ${um(mn.l_um)}, ${load}, ${vdd}` },
+    /* supply rail */
+    L(146, 22, 186, 22), T(150, 14, vdd, "strong"),
+    /* PMOS (top): gate bubble, plate, channel, source up to VDD, drain down to OUT */
+    L(166, 22, 166, 56), L(146, 56, 166, 56), L(146, 52, 146, 88), L(138, 52, 138, 88),
+    s("circle", { class: "b", cx: 134, cy: 70, r: 4 }), L(130, 70, 100, 70),
+    L(146, 84, 166, 84), L(166, 84, 166, 116),
+    T(176, 66, `MP  W ${um(mp.w_um)}`, "strong"), T(176, 80, `L ${um(mp.l_um)}`),
+    /* NMOS (bottom): plate, channel, drain up to OUT, source down to ground */
+    L(166, 116, 166, 136), L(146, 136, 166, 136), L(146, 132, 146, 168), L(138, 132, 138, 168),
+    L(138, 150, 100, 150), L(146, 164, 166, 164), L(166, 164, 166, 190),
+    T(176, 146, `MN  W ${um(mn.w_um)}`, "strong"), T(176, 160, `L ${um(mn.l_um)}`),
+    /* input */
+    L(100, 70, 100, 150), L(60, 110, 100, 110), s("circle", { class: "dot", cx: 100, cy: 110, r: 3 }), T(34, 114, "IN", "pin"),
+    /* output and load capacitor to ground */
+    s("circle", { class: "dot", cx: 166, cy: 116, r: 3 }), L(166, 116, 250, 116), T(176, 108, "OUT", "pin"),
+    L(250, 116, 250, 140), L(238, 140, 262, 140), L(238, 148, 262, 148), L(250, 148, 250, 190),
+    T(268, 148, load, "strong"),
+    /* ground */
+    L(166, 190, 250, 190), L(198, 190, 198, 196), L(188, 196, 208, 196), L(192, 201, 204, 201), L(196, 206, 200, 206), T(212, 206, "GND"));
+}
+
+/* ---------- saving a run as proof ---------- */
+function download(name, mime, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = h("a", { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const cell = (x) => String(x == null ? "" : x).replace(/\|/g, "/").replace(/\s+/g, " ");
+function markdownReport(rep, view) {
+  const out = [];
+  const status = rep.status || "INCOMPLETE";
+  out.push(`# Proof report: run ${rep.run_id || ""}`, "");
+  out.push(`**Verdict: ${status}** (decided by the verifier from ngspice measurements, never by the model)`, "");
+  if (view.trap) out.push("> Trap run: the design was planted on purpose with a false claim, to test the verifier.", "");
+  out.push("## Requirement", "", "> " + cell(rep.spec_text), "");
+  const spec = rep.intent || {};
+  out.push("## What was understood", "", `Circuit type: ${spec.circuit_type || "unknown"}`, "");
+  for (const c of spec.criteria || []) {
+    out.push(c.measurable ? `- Will be measured: \`${critText(c)}\`` : `- Cannot be verified: ${cell(c.name)} (${cell(c.unverifiable_reason)})`);
+  }
+  const cond = view.cond;
+  if (cond) {
+    out.push("");
+    for (const x of cond.applied) out.push(`- Applied: ${cell(x)}`);
+    for (const x of cond.assumed) out.push(`- Assumed: ${cell(x)}`);
+    for (const x of cond.unapplied) out.push(`- Not applied: ${cell(x)}`);
+  }
+  out.push("", "## Attempts", "");
+  for (const it of rep.iterations || []) {
+    const t = (it.design || {}).transistors || {}, mn = t.mn || {}, mp = t.mp || {};
+    out.push(`### Attempt ${it.index}: ${it.report.overall}`, "",
+      `NMOS W ${um(mn.w_um)}, PMOS W ${um(mp.w_um)}, L ${um(mn.l_um)}` + (view.trap ? " (planted design)" : ""), "");
+    if (it.design && it.design.rationale) out.push(`${view.trap ? "False claim (not evidence)" : "Model's note (not evidence)"}: ${cell(it.design.rationale)}`, "");
+    out.push("| Requirement | Measured | Limit | Margin | Verdict |", "|---|---|---|---|---|");
+    for (const v of it.report.verdicts || []) {
+      const c = v.criterion || {};
+      out.push(`| ${cell(c.name)} | ${v.measured == null ? "no measurement" : fmt(v.measured) + " " + c.unit} | ${c.metric ? critText(c) : ""} | ${v.margin == null ? "" : (v.margin >= 0 ? "+" : "-") + fmt(Math.abs(v.margin)) + " " + c.unit} | ${v.verdict}${v.reason ? " (" + cell(v.reason) + ")" : ""} |`);
+    }
+    out.push("");
+  }
+  const calls = rep.llm_calls || [];
+  if (calls.length) {
+    out.push("## Model calls", "", "| Step | Model | Latency | Prompt tokens | Reply tokens | Retries |", "|---|---|---|---|---|---|");
+    for (const c of calls) out.push(`| ${cell(c.purpose)}${c.ok ? "" : " (failed)"} | ${cell(c.model)} | ${(c.latency_s || 0).toFixed(1)} s | ${c.prompt_tokens ?? "n/a"} | ${c.completion_tokens ?? "n/a"} | ${c.retries ?? 0} |`);
+    out.push("");
+  }
+  out.push("---", "Results come from ngspice with simplified Level-1 transistor models, at 1.8 V unless a supply was stated. A pass means the design meets the spec in this simulation. It is not a sign-off.");
+  return out.join("\n");
+}
+$("dl-md").addEventListener("click", () => { if (view.lastReport) download(`spec-to-circuit-${view.lastReport.run_id || "run"}.md`, "text/markdown", markdownReport(view.lastReport, view)); });
+$("dl-json").addEventListener("click", () => { if (view.lastReport) download(`spec-to-circuit-${view.lastReport.run_id || "run"}.json`, "application/json", JSON.stringify(view.lastReport, null, 2)); });
+
 /* ---------- view: turns events into the page ---------- */
 const view = {
-  attempts: {}, text: "", started: 0, timer: null, es: null, runId: null, seen: new Set(), hasReport: false,
+  attempts: {}, text: "", trap: false, cond: null, lastReport: null, started: 0, timer: null, es: null, runId: null, seen: new Set(), hasReport: false,
 
-  reset(text) {
+  reset(text, trap) {
     this.stop();
+    this.trap = !!trap; $("trapflag").classList.toggle("on", this.trap);
     this.attempts = {}; this.text = text; this.hasReport = false; this.seen = new Set();
-    for (const id of ["understood", "attempts-wrap", "calls-wrap"]) $(id).hidden = true;
+    this.cond = null; this.lastReport = null; $("dl").hidden = true; $("compare").replaceChildren();
+    for (const id of ["understood", "attempts-wrap", "calls-wrap", "compare-wrap"]) $(id).hidden = true;
     $("understood-body").replaceChildren(); $("attempts").replaceChildren();
     $("run-errors").replaceChildren(); $("calls").replaceChildren(); $("msg").replaceChildren();
   },
@@ -314,6 +464,7 @@ const view = {
     const ul = $("notes"); if (ul) ul.append(h("li", { class: bad ? "bad" : "" }, text));
   },
   showConditions(ev) {
+    this.cond = { cload_ff: ev.cload_ff, vdd: ev.vdd, applied: ev.applied || [], assumed: ev.assumed || [], unapplied: ev.unapplied || [] };
     if (ev.cload_ff != null && !(ev.applied || []).length && !(ev.assumed || []).length) return;
     for (const t of ev.applied || []) this.note("Applied: " + t, false);
     for (const t of ev.assumed || []) this.note("Assumed: " + t, true);
@@ -334,16 +485,55 @@ const view = {
     const a = this.attemptBlock(ev.index), d = ev.design || {}, t = d.transistors || {};
     const mn = t.mn || {}, mp = t.mp || {};
     a.head.querySelector(".dims").textContent = `NMOS ${um(mn.w_um)} / PMOS ${um(mp.w_um)}, L ${um(mn.l_um)}`;
+    this.showCircuit(a, d, ev.netlist);
+    if (ev.trap) { this.markTrap(a, ev.trap); return; }
     if (d.rationale) {
       a.note.hidden = false;
       a.note.replaceChildren(h("em", {}, "Model's note (not evidence): "), d.rationale);
     }
+  },
+  showCircuit(a, d, netlist) {
+    if (a.circuit) a.circuit.remove();
+    const net = netlist
+      ? h("details", { class: "netlist" }, h("summary", {}, "Show netlist"),
+          h("pre", {}, netlist))
+      : h("div", { class: "netlist" }, h("p", { class: "hint" }, "The netlist was not saved for this run."));
+    a.circuit = h("div", { class: "circuit" }, circuitSVG(d, this.cond), net);
+    a.box.insertBefore(a.circuit, a.rows);
+  },
+  /* trap: the claim is shown as a claim, struck through once the verifier has measured the truth */
+  markTrap(a, trap) {
+    a.box.classList.add("trap");
+    a.head.querySelector("h3").append(h("span", { class: "tagtrap" }, "TRAP"));
+    a.trap = trap;
+    a.banner = h("div", { class: "trapbanner" }, h("b", {}, "Planted design. "), "Not proposed by the model. It comes with a claim that the spec is met; the claim is not read by the verifier.");
+    a.claim = h("div", { class: "claimbox" },
+      h("div", { class: "claim" }, h("span", { class: "k" }, "Claimed"),
+        h("span", { class: "v" }, `${trap.metric} ${fmt(trap.claimed)} ${trap.unit}`), h("q", {}, trap.text || "")),
+      h("div", { class: "real" }, h("span", { class: "k" }, "Measured by ngspice"), h("span", { class: "v" }, "waiting…")));
+    a.box.insertBefore(a.banner, a.note); a.box.insertBefore(a.claim, a.note);
+  },
+  trapOutcome(a, ev, rep) {
+    if (!a.trap) return;
+    const t = a.trap;
+    const v = (rep.verdicts || []).find((x) => x.criterion && x.criterion.metric === t.metric && x.criterion.threshold === t.threshold && x.criterion.unit === t.unit);
+    const real = a.claim.querySelector(".real"), val = real.querySelector(".v");
+    const result = ev.trap_result || (v ? (v.verdict === "FAIL" ? "caught" : v.verdict === "PASS" ? "passed" : "unverified") : "unverified");
+    real.classList.add(result);
+    val.textContent = v && v.measured != null ? `${t.metric} ${fmt(v.measured)} ${t.unit}` : "no measurement";
+    const words = {
+      caught: `Caught. The claim said ${fmt(t.claimed)} ${t.unit}; ngspice measured ${v && v.measured != null ? fmt(v.measured) : "?"} ${t.unit}, over the ${fmt(t.threshold)} ${t.unit} limit. The verifier marked it FAIL.`,
+      passed: "Not caught: this planted design actually met the limit in simulation, so it was not a wrong design. The verifier reported what it measured.",
+      unverified: "Not proven either way: there was no measurement for this criterion, so the claim stays UNVERIFIED.",
+    };
+    a.box.insertBefore(h("div", { class: "caught-note " + result }, words[result]), a.claim.nextSibling);
   },
   showIteration(ev) {
     const a = this.attemptBlock(ev.index), rep = ev.report || {};
     const chip = a.head.querySelector(".chip");
     chip.className = "chip " + ev.overall; chip.textContent = ev.overall;
     a.rows.replaceChildren(...(rep.verdicts || []).map((v) => this.row(v)));
+    this.trapOutcome(a, ev, rep);
   },
   row(v) {
     const c = v.criterion || {};
@@ -372,7 +562,7 @@ const view = {
   },
 
   showError(ev) {
-    const where = ev.stage === "server" ? "The server stopped this run" : ev.stage === "intent" ? "Could not read the requirement" : "Design step";
+    const where = ev.stage === "server" ? "The server stopped this run" : ev.stage === "intent" ? "Could not read the requirement" : ev.stage === "trap" ? "Trap mode could not run" : "Design step";
     $("run-errors").append(h("div", { class: "err" }, h("b", {}, where + ": "), ev.message || ""));
     $("attempts-wrap").hidden = false;
     if (ev.stage === "server") {
@@ -391,9 +581,36 @@ const view = {
       FAILED: "At least one requirement was measured and not met.",
       INCOMPLETE: iters ? "Nothing failed, but some requirements could not be verified." : "Nothing could be simulated, so nothing is verified.",
     };
+    if (this.trap) {
+      heads.FAILED = "Trap caught: the planted design was measured and failed, whatever it claimed.";
+      heads.COMPLETE = "The planted design happened to meet the spec in simulation, so nothing was caught.";
+    }
     this.setVerdict(status, status, heads[status] || "", `${iters} ${iters === 1 ? "attempt" : "attempts"}, ${calls.length} model ${calls.length === 1 ? "call" : "calls"}, ${secs.toFixed(0)} s of model time`);
     this.showCalls(calls);
+    this.showCompare(rep);
+    this.lastReport = rep; $("dl").hidden = false;
     refreshHistory();
+  },
+  showCompare(rep) {
+    const its = rep.iterations || [];
+    if (!its.length) return;
+    const last = its[its.length - 1].report.verdicts || [];
+    const cols = last.map((v) => v.criterion).filter((c) => c && c.measurable);
+    const same = (x, y) => x.metric === y.metric && x.threshold === y.threshold && x.unit === y.unit && x.operator === y.operator;
+    const head = h("tr", {}, h("th", {}, "Attempt"), h("th", {}, "NMOS W"), h("th", {}, "PMOS W"), h("th", {}, "L"),
+      ...cols.map((c) => h("th", { class: "n" }, critText(c))), h("th", {}, "Result"));
+    const body = its.map((it) => {
+      const t = (it.design || {}).transistors || {}, mn = t.mn || {}, mp = t.mp || {};
+      const cells = cols.map((c) => {
+        const v = (it.report.verdicts || []).find((x) => x.criterion && same(x.criterion, c));
+        if (!v || v.measured == null) return h("td", { class: "n unv" }, "n/a");
+        return h("td", { class: "n " + (v.verdict === "PASS" ? "pass" : v.verdict === "FAIL" ? "fail" : "unv") }, `${fmt(v.measured)} ${c.unit}`);
+      });
+      return h("tr", {}, h("td", {}, String(it.index) + (this.trap ? " (trap)" : "")), h("td", { class: "sz" }, um(mn.w_um)), h("td", { class: "sz" }, um(mp.w_um)),
+        h("td", { class: "sz" }, um(mn.l_um)), ...cells, h("td", {}, h("span", { class: "chip " + it.report.overall, style: "margin-left:0" }, it.report.overall)));
+    });
+    $("compare-wrap").hidden = false;
+    $("compare").replaceChildren(h("table", { class: "cmp" }, h("thead", {}, head), h("tbody", {}, body)));
   },
   showCalls(calls) {
     if (!calls.length) return;
@@ -412,12 +629,20 @@ const view = {
       h("tfoot", {}, h("tr", {}, h("td", {}, "Total"), h("td", {}), h("td", { class: "n" }, `${ts.toFixed(1)} s`), h("td", { class: "n" }, pt), h("td", { class: "n" }, ct), h("td", {})))));
   },
 
+  savedTrap(it, rep) {
+    const c = ((it.report || {}).verdicts || []).map((v) => v.criterion || {}).find((x) => x.measurable && ["tpd", "tphl", "tplh"].includes(x.metric));
+    if (!c) return null;
+    const m = /about\s+([0-9.eE+-]+)\s/.exec((it.design || {}).rationale || "");
+    return { metric: c.metric, claimed: m ? parseFloat(m[1]) : null, unit: c.unit, threshold: c.threshold, operator: c.operator, text: (it.design || {}).rationale || "" };
+  },
   /* a finished run loaded from disk has a report but no live events */
   fromReport(rep, text) {
     this.text = text || rep.spec_text || "";
     if (rep.intent) this.showIntent({ spec: rep.intent, notes: [] });
     for (const it of rep.iterations || []) {
-      this.showDesign({ index: it.index, design: it.design });
+      /* the claim text is saved as the design's rationale; the claimed number is only in live events */
+      const trap = this.trap && it.design ? this.savedTrap(it, rep) : null;
+      this.showDesign({ index: it.index, design: it.design, trap });
       this.showIteration({ index: it.index, overall: it.report.overall, report: it.report });
     }
     this.showReport(rep);
@@ -434,11 +659,12 @@ function offline() {
 }
 
 async function start(text) {
-  view.reset(text); go.disabled = true;
+  const trap = $("trap").checked;
+  view.reset(text, trap); go.disabled = true;
   view.started = 0; view.running("Sending your requirement");
   let res;
   try {
-    res = await fetch(API + "/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    res = await fetch(API + "/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, trap }) });
   } catch (e) { go.disabled = false; view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", ""); offline(); return; }
   if (!res.ok) {
     go.disabled = false; view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", "");
@@ -482,14 +708,14 @@ async function refreshHistory() {
   for (const r of rows) {
     const state = r.overall || (r.status === "error" ? "INCOMPLETE" : "run");
     ul.append(h("li", {}, h("button", { type: "button", "aria-current": r.run_id === view.runId ? "true" : null, onclick: () => openRun(r) },
-      h("span", { class: "t", title: r.text }, r.text),
+      h("span", { class: "t", title: r.text }, r.text, r.trap ? h("span", { class: "tagtrap" }, "TRAP") : null),
       h("span", { class: "m" }, h("span", { class: "dot-s " + state }), r.overall || (r.status === "error" ? "Stopped" : r.status),
         h("span", {}, r.created_at ? new Date(r.created_at * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "")))));
   }
 }
 
 async function openRun(row) {
-  view.reset(row.text); spec.value = row.text; go.disabled = true; view.runId = row.run_id;
+  view.reset(row.text, row.trap); spec.value = row.text; $("trap").checked = !!row.trap; go.disabled = true; view.runId = row.run_id;
   let data;
   try { const r = await fetch(`${API}/api/runs/${row.run_id}`); if (!r.ok) throw 0; data = await r.json(); }
   catch (e) { go.disabled = false; problem("Could not load that run."); return; }

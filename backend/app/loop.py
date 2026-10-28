@@ -42,6 +42,7 @@ from .schemas import (
     Verdict,
     VerificationReport,
 )
+from .trap import TrapError, plan_trap
 
 MAX_ITERATIONS = 4
 MAX_FEEDBACK_ATTEMPTS = 3
@@ -128,6 +129,20 @@ def build_feedback(attempts: list[Attempt], max_attempts: int = MAX_FEEDBACK_ATT
     return "\n".join(lines)[:1400]
 
 
+def trap_result(report: VerificationReport, metric: str, threshold: float, unit: str) -> str:
+    """What the verifier said about the criterion a trap lied about: caught, passed or unverified.
+    Read from the verifier's report only."""
+    for v in report.verdicts:
+        c = v.criterion
+        if c.measurable and c.metric == metric and c.unit == unit and c.threshold == threshold:
+            if v.verdict == Verdict.FAIL:
+                return "caught"
+            if v.verdict == Verdict.PASS:
+                return "passed"
+            return "unverified"
+    return "unverified"
+
+
 # --------------------------------------------------------------------------
 # Run
 # --------------------------------------------------------------------------
@@ -157,6 +172,7 @@ def run_spec(
     max_iterations: int = MAX_ITERATIONS,
     on_event: Callable[[dict[str, Any]], None] | None = None,
     run_id: str | None = None,
+    trap: bool = False,
 ) -> RunReport:
     run = RunReport(run_id=run_id or uuid.uuid4().hex[:8], spec_text=text if isinstance(text, str) else "")
     emit = _emitter(on_event)
@@ -201,6 +217,30 @@ def run_spec(
         emit({"type": "error", "stage": "design", "message": reason})
         return finish()
 
+    # 3b. trap mode: Python (not the model) supplies a wrong design that claims success. It is simulated
+    # and verified exactly like any other design; the verifier never reads the claim.
+    if trap:
+        try:
+            plan = plan_trap(criteria, cond.cload_ff, cond.vdd)
+            netlist = inverter_netlist(plan.design, vdd=cond.vdd, cload_ff=cond.cload_ff)
+        except (TrapError, ValueError) as exc:
+            run.final_report = no_evidence_report(criteria, f"trap mode: {exc}")
+            emit({"type": "error", "stage": "trap", "message": str(exc)})
+            return finish()
+        emit({"type": "design", "index": 1, "design": plan.design.model_dump(mode="json"),
+              "notes": [], "trap": plan.event_payload(), "netlist": netlist})
+        try:
+            sim = simulate(netlist)
+        except Exception as exc:  # any simulator failure is "no evidence", never a pass
+            sim = SimulationResult(ok=False, error=f"simulator raised {type(exc).__name__}: {exc}"[:300])
+        report = verify(criteria, sim)
+        run.iterations.append(IterationRecord(index=1, design=plan.design, simulation=sim, report=report))
+        emit({"type": "iteration", "index": 1, "overall": report.overall.value,
+              "report": report.model_dump(mode="json"),
+              "trap_result": trap_result(report, plan.claim_metric, plan.threshold, plan.claim_unit)})
+        run.final_report = report
+        return finish()
+
     # 4. design -> simulate -> verify, repeated while a redesign could help
     attempts: list[Attempt] = []
     feedback: str | None = None
@@ -221,7 +261,7 @@ def run_spec(
                   "message": "the model repeated an earlier design; stopping instead of re-simulating it"})
             break
         emit({"type": "design", "index": index, "design": proposal.design.model_dump(mode="json"),
-              "notes": proposal.notes})
+              "notes": proposal.notes, "netlist": netlist})
 
         try:
             sim = simulate(netlist)

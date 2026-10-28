@@ -158,7 +158,7 @@ class WhenThereIsNothingToVerify(unittest.TestCase):
         self.assertIn("low power", run.final_report.unresolved)
 
     def test_unsupported_circuit_is_never_designed(self):
-        run, llm, sim = go([intent_reply(circuit_type="op-amp")])
+        run, llm, sim = go([intent_reply(circuit_type="op-amp")], text="Two-stage op-amp, 60 dB gain")
         self.assertEqual(run.status, OverallStatus.INCOMPLETE)
         self.assertEqual(sim.calls, [])
         self.assertEqual(len(llm.requests), 1)

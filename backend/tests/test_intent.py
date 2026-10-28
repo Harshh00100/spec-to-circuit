@@ -430,3 +430,25 @@ class GroundedParameters(unittest.TestCase):
             reply([req("output high above 1.7 V", "voh", ">", 1.7, "V")], parameters={"supply": "1.8 V"}),
             text=text)
         self.assertEqual(result.spec.parameters, {"supply": "1.8 V"})
+
+
+class CircuitTypeFromTheUsersWords(unittest.TestCase):
+    """Seen live: a 3B model labelled 'CMOS inverter, delay under 40 ps' as an op-amp, so no design ran."""
+
+    def test_the_word_inverter_in_the_text_beats_a_wrong_model_label(self):
+        result, _ = compile_with(reply([req(threshold=40, unit="ps")], circuit_type="opamp"),
+                                 text="CMOS inverter, propagation delay under 40 ps")
+        self.assertEqual(result.spec.circuit_type, "inverter")
+        self.assertTrue(is_supported(result.spec))
+        self.assertTrue(any("replaced by 'inverter'" in n for n in result.notes))
+
+    def test_a_label_the_user_also_wrote_is_kept(self):
+        result, _ = compile_with(reply([req()], circuit_type="op-amp"),
+                                 text="op-amp with an inverter stage, gain above 40 dB")
+        self.assertEqual(result.spec.circuit_type, "op-amp")
+
+    def test_without_the_word_inverter_the_model_label_stands(self):
+        result, _ = compile_with(reply([req()], circuit_type="opamp"), text="Two-stage opamp, 60 dB gain")
+        self.assertEqual(result.spec.circuit_type, "opamp")
+        self.assertFalse(is_supported(result.spec))
+        self.assertFalse(any("replaced" in n for n in result.notes))

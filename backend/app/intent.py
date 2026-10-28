@@ -389,6 +389,10 @@ def _circuit_type(raw: str, text: str) -> str:
         return "inverter"
     if low in ("", "unknown", "cmos", "cmos circuit") and "inverter" in text.lower():
         return "inverter"
+    # The user wrote "inverter" but the model named something else (a 3B model once said "opamp"):
+    # trust the user's own words, unless the model's label is also written in the text.
+    if low and "inverter" in text.lower() and _key(low) not in _key(text):
+        return "inverter"
     return low or "unknown"
 
 
@@ -584,6 +588,11 @@ def compile_intent(text: str, llm: LLMClient | None = None) -> IntentResult:
         criteria.append(criterion)
 
     circuit_type = _circuit_type(raw.circuit_type, text)
+    given = raw.circuit_type.strip().lower()
+    if circuit_type == "inverter" and given and "inverter" not in given and given not in (
+            "unknown", "cmos", "cmos circuit", "not gate"):
+        notes.append(f"circuit type '{raw.circuit_type.strip()}' from the model was replaced by 'inverter': "
+                     "your requirement says inverter")
     if circuit_type not in SUPPORTED_CIRCUITS:
         notes.append(
             f"circuit type '{circuit_type}' has no template yet; "

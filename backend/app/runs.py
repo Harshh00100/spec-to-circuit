@@ -29,9 +29,10 @@ _ID = re.compile(r"^[0-9a-f]{8}$")
 
 
 class RunHandle:
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, trap: bool = False) -> None:
         self.id = uuid.uuid4().hex[:8]
         self.text = text
+        self.trap = bool(trap)            # trap run: a wrong design that claims success is injected
         self.status = "queued"            # queued -> running -> done | error
         self.overall: str | None = None   # COMPLETE / FAILED / INCOMPLETE, from the verifier only
         self.created_at = time.time()
@@ -56,7 +57,7 @@ class RunHandle:
 
     def summary(self) -> dict[str, Any]:
         return {"run_id": self.id, "text": self.text, "status": self.status,
-                "overall": self.overall, "created_at": self.created_at}
+                "overall": self.overall, "created_at": self.created_at, "trap": self.trap}
 
 
 def sse(event: dict[str, Any], index: int) -> str:
@@ -82,8 +83,8 @@ class RunManager:
         self._exec = threading.Lock()     # one run at a time
 
     # ---- starting and finding runs -------------------------------------
-    def start(self, text: str) -> RunHandle:
-        handle = RunHandle(text if isinstance(text, str) else "")
+    def start(self, text: str, trap: bool = False) -> RunHandle:
+        handle = RunHandle(text if isinstance(text, str) else "", trap=trap)
         with self._lock:
             self._runs[handle.id] = handle
             self._evict()
@@ -137,7 +138,8 @@ class RunManager:
                 handle.status = "running"
                 handle.push({"type": "started", "run_id": handle.id})
                 report = run_spec(handle.text, self._llm, simulate=self._simulate,
-                                  verify=self._verify, on_event=handle.push, run_id=handle.id)
+                                  verify=self._verify, on_event=handle.push, run_id=handle.id,
+                                  trap=handle.trap)
                 data = report.model_dump(mode="json")
                 handle.report = data
                 handle.overall = report.status.value   # straight from the verifier's report
@@ -170,7 +172,7 @@ class RunManager:
                 continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-                rows.append({k: data.get(k) for k in ("run_id", "text", "status", "overall", "created_at")})
+                rows.append({k: data.get(k) for k in ("run_id", "text", "status", "overall", "created_at", "trap")})
             except (OSError, ValueError):
                 continue
         return rows

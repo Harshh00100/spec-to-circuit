@@ -114,7 +114,7 @@ $env:NGSPICE_BIN = "C:\ngspice\Spice64\bin\ngspice_con.exe"
 python -m unittest discover -s tests -t .
 ```
 
-218 tests pass. Without `NGSPICE_BIN`, the integration tests that need real ngspice are skipped. The unit tests use a scripted fake model (`FakeLLM`) and never need Ollama. `FakeLLM` is a test fixture, not a model, and passing tests with it show that the rules work, not that any real model is good.
+226 tests pass. Without `NGSPICE_BIN`, the integration tests that need real ngspice are skipped. The unit tests use a scripted fake model (`FakeLLM`) and never need Ollama. `FakeLLM` is a test fixture, not a model, and passing tests with it show that the rules work, not that any real model is good.
 
 ## Demo script (about 5 minutes)
 
@@ -125,6 +125,20 @@ python -m unittest discover -s tests -t .
 5. **Trap mode.** Same 40 ps requirement with Trap mode ticked. The false claim is shown next to the ngspice measurement, and the verdict is FAILED ("Caught").
 
 Timing on a CPU-only PC with a 3B model: each model call takes roughly 15 to 90 seconds, so a run can take from one to several minutes. Close other programs first; the model needs about 2 GB of free memory.
+
+## Benchmark: plain model versus this system
+
+`python -m benchmark.run_benchmark` runs each spec twice on the same model. The **plain model** is asked once for transistor sizes and whether its design meets the spec; no tools, no feedback. Its claim is then checked by a real ngspice run of the sizes it chose. The **system** is the normal pipeline. Results from one run on `llama3.2:3b` (29 Oct 2026):
+
+| Spec | Plain model said | Its real delay | System verdict | System real delay | Attempts |
+|---|---|---|---|---|---|
+| tpd < 40 ps at 20 fF | met | 246.73 ps | COMPLETE | 37.34 ps | 3 |
+| tpd < 1 ps at 20 fF (impossible) | met | 405.57 ps | FAILED | 6.4 ps | 3 |
+| tpd < 0.1 ns driving 50 fF | met | 2220.54 ps | COMPLETE | 87.45 ps | 2 |
+
+The plain model said "met" three times out of three, and none of its designs met the spec (its real delays were about 6, 22 and 405 times over the limit). The system produced two designs with a measured pass and reported the impossible spec as FAILED. A cross-check found no COMPLETE that missed its limit.
+
+Read this carefully: 3 specs, one run each, one small model and a simple baseline. The comparison is not purely "verifier versus no verifier". The system's design prompt also gives sizing hints, and after a FAIL it feeds back measured numbers built by Python; the plain model got the allowed size ranges but no hints and no feedback. Part of the gap comes from that help. A fairer follow-up would give the plain model the same hints and the same number of attempts with feedback. A stronger model or a better-engineered baseline would likely do better, and results vary from run to run. Raw numbers are saved in `backend/benchmark/results/`. Two more specs are available with `--limit 5` and have not been run.
 
 ## Project layout
 
@@ -143,6 +157,7 @@ backend/app/
   runs.py        background runs, live events, saved history
   main.py        FastAPI endpoints
   run.py         command-line runner
+backend/benchmark/   plain-model-versus-system benchmark and its saved results
 backend/tests/   unit and integration tests
 frontend/index.html   the web page
 ```
@@ -154,7 +169,7 @@ API: `GET /api/health`, `POST /api/runs` (`{"text": "...", "trap": false}`), `GE
 - **One circuit type.** Only a CMOS inverter has a template. Other circuits are refused, not approximated. Measurable metrics: propagation delay (`tpd`, `tphl`, `tplh`) and output levels (`voh`, `vol`).
 - **Simplified models.** Transistors use Level-1 models, not a real process design kit. A PASS means "passes in this simulation" at an assumed 1.8 V and 20 fF unless your requirement says otherwise. It is not sign-off.
 - **Small local model.** Every live result here came from `llama3.2:3b` on a CPU. Expect slow calls, some poor first drafts and occasional retries. That is why Python validates and decides everything.
-- **Not benchmarked yet.** There is no measured comparison against a plain LLM-only answer. Do not read this README as claiming one.
+- **Benchmark is small.** 3 specs, one run each, one 3B model, one simple baseline prompt (see below). It is an anecdote, not a statistic.
 - **Hosted models untested.** The client is built for OpenAI-compatible endpoints, but only local Ollama has been run.
 - **History is partial.** A reopened past run shows its report, but not the netlist or the load and supply labels on the diagram (those exist only in live events).
 - **Trap mode** covers delay limits only (`<`, `<=`), and stops after one attempt.

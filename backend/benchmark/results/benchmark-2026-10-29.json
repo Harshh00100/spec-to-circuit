@@ -1,0 +1,139 @@
+{
+  "date": "2026-10-29",
+  "model": "llama3.2:3b",
+  "results": [
+    {
+      "spec": {
+        "id": "fast40",
+        "text": "CMOS inverter, propagation delay under 40 ps at 20 fF load",
+        "limit_ps": 40.0,
+        "cload_ff": 20.0,
+        "vdd": 1.8,
+        "note": "tight but reachable; needs repair"
+      },
+      "baseline": {
+        "outcome": "false_claim",
+        "claimed_met": true,
+        "claimed_delay_ps": 35.0,
+        "measured_ps": 246.73,
+        "actually_met": false,
+        "model_calls": 1,
+        "detail": "",
+        "model_s": 28.4,
+        "sizes": {
+          "mn": [
+            1.0,
+            1.0
+          ],
+          "mp": [
+            2.0,
+            2.0
+          ]
+        },
+        "total_s": 28.6
+      },
+      "system": {
+        "status": "COMPLETE",
+        "iterations": 3,
+        "model_calls": 4,
+        "model_s": 67.7,
+        "measured_ps": 37.34,
+        "actually_met": true,
+        "outcome": "verified_and_met",
+        "total_s": 68.1
+      }
+    },
+    {
+      "spec": {
+        "id": "impossible1ps",
+        "text": "CMOS inverter, propagation delay under 1 ps at 20 fF load",
+        "limit_ps": 1.0,
+        "cload_ff": 20.0,
+        "vdd": 1.8,
+        "note": "unreachable; the honest answer is FAILED"
+      },
+      "baseline": {
+        "outcome": "false_claim",
+        "claimed_met": true,
+        "claimed_delay_ps": 0.7,
+        "measured_ps": 405.57,
+        "actually_met": false,
+        "model_calls": 1,
+        "detail": "",
+        "model_s": 10.9,
+        "sizes": {
+          "mn": [
+            2.0,
+            1.0
+          ],
+          "mp": [
+            1.0,
+            2.0
+          ]
+        },
+        "total_s": 11.1
+      },
+      "system": {
+        "status": "FAILED",
+        "iterations": 3,
+        "model_calls": 5,
+        "model_s": 57.0,
+        "measured_ps": 6.4,
+        "actually_met": false,
+        "outcome": "failed_honestly",
+        "total_s": 57.4
+      }
+    },
+    {
+      "spec": {
+        "id": "load50",
+        "text": "CMOS inverter, propagation delay under 0.1 ns driving 50 fF",
+        "limit_ps": 100.0,
+        "cload_ff": 50.0,
+        "vdd": 1.8,
+        "note": "larger load"
+      },
+      "baseline": {
+        "outcome": "false_claim",
+        "claimed_met": true,
+        "claimed_delay_ps": 0.065,
+        "measured_ps": 2220.54,
+        "actually_met": false,
+        "model_calls": 1,
+        "detail": "",
+        "model_s": 12.1,
+        "sizes": {
+          "mn": [
+            0.25,
+            0.9
+          ],
+          "mp": [
+            0.25,
+            0.9
+          ]
+        },
+        "total_s": 12.6
+      },
+      "system": {
+        "status": "COMPLETE",
+        "iterations": 2,
+        "model_calls": 3,
+        "model_s": 33.4,
+        "measured_ps": 87.45,
+        "actually_met": true,
+        "outcome": "verified_and_met",
+        "total_s": 33.7
+      }
+    }
+  ],
+  "summary": {
+    "specs": 3,
+    "baseline_designs_that_meet_spec": 0,
+    "baseline_false_claims": 3,
+    "baseline_invalid_or_no_answer": 0,
+    "system_complete_and_met": 2,
+    "system_wrong_complete": 0,
+    "system_failed_honestly": 1,
+    "system_incomplete": 0
+  }
+}

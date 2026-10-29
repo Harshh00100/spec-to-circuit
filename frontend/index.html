@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spec to Circuit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232447d6'/%3E%3Cpath d='M8 8v16l11-8z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Ccircle cx='22.5' cy='16' r='2.6' fill='none' stroke='white' stroke-width='2.2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
   :root {
     --paper: #f3f5f8;
@@ -19,29 +23,53 @@
     --fail-bg: #fbe8e8;
     --warn: #96600a;
     --warn-bg: #fbf0dc;
-    --display: Bahnschrift, "DIN Alternate", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
-    --body: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-    --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+    --on-blue: #ffffff;
+    --grid: rgba(36, 71, 214, .055);
+    --radius: 6px;
+    --shadow: 0 1px 2px rgba(18, 24, 38, .06), 0 2px 8px rgba(18, 24, 38, .05);
+    --display: "Space Grotesk", "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --mono: "JetBrains Mono", "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --paper: #0f141d; --sheet: #161d29; --ink: #e8ecf3; --ink-2: #9aa5b8;
-      --rule: #2b3547; --rule-soft: #212a39; --blue: #7d98ff;
+      --rule: #2b3547; --rule-soft: #212a39; --blue: #7d98ff; --on-blue: #0b1020; --grid: rgba(125, 152, 255, .07);
       --pass: #4fd1a5; --pass-bg: #12322a; --fail: #ff8080; --fail-bg: #3a1c1f;
-      --warn: #f0b95b; --warn-bg: #36290f;
+      --warn: #f0b95b; --warn-bg: #36290f; --shadow: 0 1px 2px rgba(0, 0, 0, .4);
     }
   }
+  :root[data-theme="dark"] {
+    --paper: #0f141d; --sheet: #161d29; --ink: #e8ecf3; --ink-2: #9aa5b8;
+    --rule: #2b3547; --rule-soft: #212a39; --blue: #7d98ff; --on-blue: #0b1020; --grid: rgba(125, 152, 255, .07);
+    --pass: #4fd1a5; --pass-bg: #12322a; --fail: #ff8080; --fail-bg: #3a1c1f;
+    --warn: #f0b95b; --warn-bg: #36290f; --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  }
   * { box-sizing: border-box; }
-  html { background: var(--paper); }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body); }
+  [hidden] { display: none !important; }
+  ::selection { background: var(--blue); color: var(--on-blue); }
+  textarea { caret-color: var(--blue); }
+  input[type="checkbox"] { accent-color: var(--blue); }
+  * { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+  a { text-underline-offset: .2em; text-decoration-thickness: 1px; }
+  html { background-color: var(--paper); color-scheme: light dark;
+         background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+         background-size: 28px 28px; }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  body { margin: 0; background: transparent; color: var(--ink); font: 16px/1.55 var(--body); }
   button, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 
   .app { max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; display: grid;
          grid-template-columns: minmax(0, 1fr) 270px; gap: 28px 32px; align-items: start; }
-  header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px;
+  header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px;
            border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
-  h1 { font: 700 30px/1 var(--display); letter-spacing: .01em; margin: 0; }
+  .theme-btn { margin-left: auto; min-height: 40px; padding: 0 14px; background: var(--sheet); border: 1.5px solid var(--rule);
+               border-radius: 999px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+  .theme-btn:hover { border-color: var(--ink-2); color: var(--ink); }
+  h1 { font: 700 32px/1.1 var(--display); letter-spacing: -.015em; margin: 0; }
+  .logo { width: 36px; height: 36px; flex: none; align-self: center; }
   header p { margin: 0; color: var(--ink-2); }
   main { min-width: 0; }
   aside { min-width: 0; }
@@ -49,23 +77,30 @@
   /* request */
   .ask label { display: block; font: 600 15px var(--body); margin-bottom: 6px; }
   .ask-row { display: flex; gap: 10px; align-items: stretch; }
-  textarea { flex: 1; min-height: 76px; resize: vertical; padding: 10px 12px; background: var(--sheet);
-             border: 1.5px solid var(--ink-2); border-radius: 3px; }
-  .go { padding: 0 22px; background: var(--blue); color: #fff; border: 0; border-radius: 3px;
-        font: 700 16px var(--display); cursor: pointer; min-width: 96px; }
-  .go[disabled] { opacity: .55; cursor: progress; }
+  textarea { flex: 1; min-height: 84px; resize: vertical; padding: 12px 14px; background: var(--sheet);
+             border: 1.5px solid var(--ink-2); border-radius: var(--radius); line-height: 1.45; }
+  textarea::placeholder { color: var(--ink-2); opacity: .8; }
+  .go { padding: 0 24px; background: var(--blue); color: var(--on-blue); border: 0; border-radius: var(--radius);
+        font: 700 16px var(--display); cursor: pointer; min-width: 120px; min-height: 48px; transition: filter .15s; box-shadow: 0 2px 8px rgba(36, 71, 214, .3); }
+  .go:hover:not([disabled]) { filter: brightness(1.08); }
+  .go[disabled] { opacity: .65; cursor: progress; }
+  .kbd { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); }
+  .kbd kbd { font: 12px var(--mono); border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--sheet); }
   .examples { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; color: var(--ink-2); font-size: 13px; }
-  .ex { background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; cursor: pointer; color: var(--ink-2); }
+  .ex { background: var(--sheet); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 12px; min-height: 36px; cursor: pointer; color: var(--ink-2); text-align: left; }
   .ex:hover { border-color: var(--ink-2); color: var(--ink); }
 
   /* verdict */
   .verdict { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center;
-             padding: 16px 18px; background: var(--sheet); border: 1px solid var(--rule); border-left: 8px solid var(--rule); }
-  .verdict[data-state="COMPLETE"] { border-left-color: var(--pass); }
-  .verdict[data-state="FAILED"] { border-left-color: var(--fail); }
-  .verdict[data-state="INCOMPLETE"] { border-left-color: var(--warn); }
-  .verdict[data-state="running"] { border-left-color: var(--blue); }
-  .stamp { font: 700 34px/1 var(--display); letter-spacing: .04em; padding: 6px 12px; border: 3px solid currentColor; min-width: 8.5ch; text-align: center; }
+             padding: 18px 20px; background: var(--sheet); border: 1px solid var(--rule); border-top: 4px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .verdict[data-state="COMPLETE"] { border-top-color: var(--pass); }
+  .verdict[data-state="FAILED"] { border-top-color: var(--fail); }
+  .verdict[data-state="INCOMPLETE"] { border-top-color: var(--warn); }
+  .verdict[data-state="running"] { border-top-color: var(--blue); }
+  .stamp { font: 700 34px/1 var(--display); letter-spacing: .02em; padding: 8px 14px; border: 3px solid currentColor; border-radius: 4px; min-width: 8.5ch; text-align: center; }
+  .verdict[data-state="COMPLETE"] { background: linear-gradient(100deg, var(--pass-bg), var(--sheet) 60%); }
+  .verdict[data-state="FAILED"] { background: linear-gradient(100deg, var(--fail-bg), var(--sheet) 60%); }
+  .verdict[data-state="INCOMPLETE"] { background: linear-gradient(100deg, var(--warn-bg), var(--sheet) 60%); }
   .verdict[data-state="COMPLETE"] .stamp { color: var(--pass); }
   .verdict[data-state="FAILED"] .stamp { color: var(--fail); }
   .verdict[data-state="INCOMPLETE"] .stamp { color: var(--warn); }
@@ -79,11 +114,11 @@
   @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
   @media (prefers-reduced-motion: reduce) { .bar i { animation: none; width: 100%; opacity: .4; } }
 
-  h2 { font: 700 20px var(--display); margin: 30px 0 10px; letter-spacing: .01em; }
+  h2 { font: 700 20px var(--display); margin: 32px 0 12px; letter-spacing: .01em; text-wrap: balance; }
   h2 small { font: 400 14px var(--body); color: var(--ink-2); margin-left: 8px; }
 
   /* understood */
-  .panel { background: var(--sheet); border: 1px solid var(--rule); padding: 14px 16px; }
+  .panel { background: var(--sheet); border: 1px solid var(--rule); padding: 14px 16px; border-radius: var(--radius); box-shadow: var(--shadow); }
   .said { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--rule); color: var(--ink-2); font-style: italic; overflow-wrap: anywhere; }
   .crit-list { list-style: none; margin: 0; padding: 0; }
   .crit-list li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--rule-soft); }
@@ -91,18 +126,20 @@
   .tag { font: 600 12px var(--body); padding: 1px 8px; border-radius: 2px; }
   .tag.ok { background: var(--pass-bg); color: var(--pass); }
   .tag.no { background: var(--warn-bg); color: var(--warn); }
-  .code { font-family: var(--mono); font-size: 14px; }
+  .code { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
   .notes { margin: 10px 0 0; padding: 10px 0 0; border-top: 1px dashed var(--rule); list-style: none; font-size: 14px; color: var(--ink-2); }
   .notes li { padding: 2px 0 2px 16px; position: relative; overflow-wrap: anywhere; }
   .notes li::before { content: ""; position: absolute; left: 3px; top: .62em; width: 6px; height: 6px; background: var(--ink-2); }
   .notes li.bad::before { background: var(--warn); }
 
   /* attempts */
-  .attempt { background: var(--sheet); border: 1px solid var(--rule); margin-bottom: 14px; }
+  .attempt { background: var(--sheet); border: 1px solid var(--rule); margin-bottom: 16px; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; animation: rise .3s cubic-bezier(.16, 1, .3, 1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .attempt { animation: none; } }
   .att-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 10px 16px; border-bottom: 1px solid var(--rule); }
   .att-head h3 { margin: 0; font: 700 18px var(--display); }
   .att-head .dims { font: 14px var(--mono); }
-  .chip { margin-left: auto; font: 700 13px var(--display); letter-spacing: .05em; padding: 2px 10px; border: 2px solid currentColor; }
+  .chip { margin-left: auto; font: 700 13px var(--display); letter-spacing: .04em; padding: 3px 10px; border: 2px solid currentColor; border-radius: 4px; }
   .chip.PASS, .chip.COMPLETE { color: var(--pass); }
   .chip.FAIL, .chip.FAILED { color: var(--fail); }
   .chip.UNVERIFIED, .chip.INCOMPLETE { color: var(--warn); border-style: dashed; }
@@ -114,7 +151,7 @@
   .row:first-of-type { border-top: 0; }
   .row .what b { display: block; font-weight: 600; overflow-wrap: anywhere; text-wrap: balance; }
   .row .what span { font: 13px var(--mono); color: var(--ink-2); }
-  .row .nums { font: 14px var(--mono); }
+  .row .nums { font: 14px var(--mono); font-variant-numeric: tabular-nums; }
   .row .nums b { font-size: 16px; }
   .row .nums .margin.pos { color: var(--pass); } .row .nums .margin.neg { color: var(--fail); }
   .row .res { justify-self: end; }
@@ -123,18 +160,20 @@
   .waiting { padding: 14px 16px; color: var(--ink-2); display: flex; gap: 10px; align-items: center; }
 
   .gauge { position: relative; height: 34px; }
-  .gauge .track { position: absolute; left: 0; right: 0; top: 12px; height: 10px; background: var(--rule-soft); }
-  .gauge .ok { position: absolute; top: 12px; height: 10px; background: var(--pass-bg); outline: 1px solid var(--pass); outline-offset: -1px; }
+  .gauge .track { position: absolute; left: 0; right: 0; top: 11px; height: 12px; background: var(--rule-soft); border-radius: 6px; }
+  .gauge .ok { position: absolute; top: 11px; height: 12px; border-radius: 6px; background: var(--pass-bg); outline: 1px solid var(--pass); outline-offset: -1px; }
   .gauge .tick { position: absolute; top: 5px; width: 2px; height: 24px; background: var(--ink); transform: translateX(-1px); }
   .gauge .dot { position: absolute; top: 9px; width: 16px; height: 16px; border-radius: 50%; transform: translateX(-8px); border: 3px solid var(--sheet); box-shadow: 0 0 0 1.5px currentColor; background: currentColor; }
   .gauge.PASS .dot { color: var(--pass); } .gauge.FAIL .dot { color: var(--fail); }
-  .gauge .lbl { position: absolute; top: 27px; font: 11px var(--mono); color: var(--ink-2); transform: translateX(-50%); white-space: nowrap; }
+  .gauge .lbl { position: absolute; top: 27px; font: 12px var(--mono); color: var(--ink-2); transform: translateX(-50%); white-space: nowrap; }
 
   /* trap mode */
-  .trapopt { margin: 10px 0 0; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
-  .trapopt input { margin-top: 4px; width: 16px; height: 16px; accent-color: var(--fail); }
+  .trapopt { margin: 12px 0 0; display: flex; gap: 10px; align-items: flex-start; font-size: 14px; padding: 8px 10px; border: 1px dashed var(--rule); border-radius: var(--radius); cursor: pointer; }
+  .ask label.trapopt { display: flex; font-weight: 400; margin-bottom: 0; }
+  .trapopt input { margin-top: 2px; width: 20px; height: 20px; flex: none; accent-color: var(--fail); }
+  .trapopt b { font-weight: 600; }
   .trapopt small { display: block; color: var(--ink-2); font-size: 13px; }
-  .trapflag { display: none; margin-top: 10px; padding: 7px 12px; background: var(--warn-bg); border-left: 5px solid var(--warn); font-size: 14px; }
+  .trapflag { display: none; margin-top: 10px; padding: 7px 12px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--radius); font-size: 14px; }
   .trapflag.on { display: block; }
   .attempt.trap { border-color: var(--warn); border-style: dashed; }
   .trapbanner { padding: 8px 16px; font-size: 13px; background: var(--warn-bg); color: var(--warn); border-bottom: 1px solid var(--rule-soft); }
@@ -143,7 +182,7 @@
   .claimbox > div { padding: 10px 16px; }
   .claimbox > div + div { border-left: 1px solid var(--rule-soft); }
   .claimbox .k { display: block; font: 600 12px var(--body); color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
-  .claimbox .v { font: 700 20px var(--display); }
+  .claimbox .v { font: 700 19px var(--mono); }
   .claimbox .claim .v { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--ink-2); }
   .claimbox .claim q { display: block; font-size: 13px; color: var(--ink-2); font-style: italic; margin-top: 2px; quotes: none; overflow-wrap: anywhere; }
   .claimbox .real.caught .v { color: var(--fail); }
@@ -154,15 +193,20 @@
   .tagtrap { font: 700 11px var(--display); letter-spacing: .06em; color: var(--warn); border: 1.5px dashed currentColor; padding: 0 5px; margin-left: 6px; }
 
   /* circuit + netlist */
-  .circuit { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: flex-start; padding: 10px 16px; border-bottom: 1px solid var(--rule-soft); }
-  .circuit svg { width: 340px; max-width: 100%; height: auto; flex: none; }
-  .ckt line, .ckt path, .ckt circle.b { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: square; }
+  .circuit { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; padding: 14px 16px; border-bottom: 1px solid var(--rule-soft); }
+  .circuit svg { width: min(100%, 460px); height: auto; flex: none; }
+  .ckt rect.bg { fill: var(--paper); stroke: var(--rule); stroke-width: 1.5; }
+  .ckt line, .ckt path, .ckt circle.b { stroke: var(--ink); stroke-width: 2.2; fill: none; stroke-linecap: square; }
+  .ckt line.vdd { stroke: var(--warn); stroke-width: 3.2; }
+  .ckt line.out { stroke: var(--blue); }
+  .ckt text.vdd { fill: var(--warn); }
   .ckt circle.dot { fill: var(--ink); stroke: none; }
   .ckt text { fill: var(--ink-2); font: 12px var(--mono); }
   .ckt text.strong { fill: var(--ink); font-weight: 700; }
   .ckt text.pin { fill: var(--blue); font: 700 13px var(--display); letter-spacing: .04em; }
-  .netlist { flex: 1; min-width: 220px; font-size: 13px; }
-  .netlist summary { cursor: pointer; color: var(--blue); font-weight: 600; }
+  .netlist { width: 100%; min-width: 0; font-size: 13px; }
+  .netlist summary { cursor: pointer; color: var(--blue); font-weight: 600; min-height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--rule); border-radius: 999px; background: var(--paper); list-style-position: inside; }
+  .netlist summary:hover { border-color: var(--blue); }
   .netlist pre { margin: 8px 0 0; padding: 10px 12px; background: var(--paper); border: 1px solid var(--rule-soft); font: 12px/1.45 var(--mono); overflow-x: auto; max-height: 260px; }
   .netlist .hint { color: var(--ink-2); margin: 0; }
 
@@ -170,7 +214,7 @@
   .cmp td.pass { color: var(--pass); font-weight: 600; } .cmp td.fail { color: var(--fail); font-weight: 600; } .cmp td.unv { color: var(--warn); }
   .cmp td.sz { font-family: var(--mono); font-size: 13px; }
   .dl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; color: var(--ink-2); font-size: 13px; }
-  .dl button { background: var(--sheet); border: 1.5px solid var(--ink-2); border-radius: 3px; padding: 5px 12px; cursor: pointer; font-weight: 600; }
+  .dl button { background: var(--sheet); border: 1.5px solid var(--ink-2); border-radius: var(--radius); padding: 8px 14px; min-height: 40px; cursor: pointer; font-weight: 600; }
   .dl button:hover { border-color: var(--ink); }
 
   /* calls */
@@ -183,14 +227,15 @@
   .scroll { overflow-x: auto; }
 
   .fine { margin-top: 26px; color: var(--ink-2); font-size: 13px; max-width: 70ch; }
-  .err { margin-top: 14px; padding: 10px 14px; background: var(--fail-bg); border-left: 5px solid var(--fail); color: var(--ink); overflow-wrap: anywhere; }
+  .err { margin-top: 14px; padding: 10px 14px; background: var(--fail-bg); border: 1px solid var(--fail); border-radius: var(--radius); color: var(--ink); overflow-wrap: anywhere; }
 
   /* history */
   aside h2 { margin-top: 0; }
+  @media (min-width: 881px) { aside { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; } }
   .hist { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
-  .hist button { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 9px 4px; cursor: pointer; }
+  .hist button { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 11px 6px; min-height: 44px; cursor: pointer; }
   .hist button:hover { background: var(--sheet); }
-  .hist button[aria-current="true"] { background: var(--sheet); box-shadow: inset 4px 0 0 var(--blue); padding-left: 12px; }
+  .hist button[aria-current="true"] { background: var(--sheet); box-shadow: inset 0 0 0 1.5px var(--blue); border-radius: var(--radius); }
   .hist .t { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hist .m { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
   .dot-s { width: 9px; height: 9px; display: inline-block; border: 2px solid currentColor; }
@@ -198,7 +243,35 @@
   .dot-s.INCOMPLETE { color: var(--warn); } .dot-s.run { color: var(--blue); }
   .empty { color: var(--ink-2); font-size: 14px; padding: 10px 0; }
 
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  .how { margin: 22px 0 0; padding: 16px 18px; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); }
+  .how h2 { margin: 0 0 10px; font-size: 16px; }
+  .how ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; counter-reset: how; }
+  .how li { position: relative; padding-left: 34px; font-size: 14px; color: var(--ink-2); counter-increment: how; }
+  .how li::before { content: counter(how); position: absolute; left: 0; top: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+                    font: 700 13px var(--display); color: var(--on-blue); background: var(--blue); }
+  .how li b { display: block; color: var(--ink); font-weight: 600; }
+
+  .steps { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .steps li { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--rule); border-radius: 999px; font-size: 13px; color: var(--ink-2); background: var(--sheet); }
+  .steps li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; flex: none; }
+  .steps li[data-s="done"] { color: var(--pass); border-color: var(--pass); }
+  .steps li[data-s="done"]::before { background: currentColor; }
+  .steps li[data-s="active"] { color: var(--blue); border-color: var(--blue); font-weight: 600; }
+  .steps li[data-s="active"]::before { border-style: dotted; animation: spin 1.2s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .steps li[data-s="active"]::before { animation: none; } }
+
+  .vkey { display: block; margin-top: 4px; font: 14px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); overflow-wrap: anywhere; }
+  .stamp::before { content: attr(data-icon); margin-right: .35em; }
+  @keyframes arrive { from { opacity: 0; transform: scale(.93); } to { opacity: 1; transform: none; } }
+  .verdict[data-state="COMPLETE"] .stamp, .verdict[data-state="FAILED"] .stamp, .verdict[data-state="INCOMPLETE"] .stamp { animation: arrive .4s cubic-bezier(.16, 1, .3, 1); }
+  @media (prefers-reduced-motion: reduce) { .verdict .stamp { animation: none !important; } }
+
   @media (max-width: 880px) {
+    .how ol { grid-template-columns: 1fr; }
+    .ex, .theme-btn, .dl button, .go, .netlist summary { min-height: 44px; }
     .app { grid-template-columns: minmax(0, 1fr); }
     .row { grid-template-columns: 1fr auto; }
     .row .what { order: 1; }
@@ -207,7 +280,7 @@
     .row .gauge { order: 4; grid-column: 1 / -1; }
     .ask-row { flex-direction: column; }
     .go { padding: 12px; }
-    .stamp { font-size: 28px; }
+    .stamp { font-size: 22px; }
     .claimbox { grid-template-columns: 1fr; }
     .claimbox > div + div { border-left: 0; border-top: 1px solid var(--rule-soft); }
   }
@@ -216,8 +289,10 @@
 <body>
 <div class="app">
   <header>
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2447d6"/><path d="M8 8v16l11-8z" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><circle cx="22.5" cy="16" r="2.6" fill="none" stroke="#fff" stroke-width="2.2"/></svg>
     <h1>Spec to Circuit</h1>
     <p>Nothing is done until it is measured.</p>
+    <button class="theme-btn" id="theme" type="button" aria-label="Colour theme: automatic. Press to change.">Theme: Auto</button>
   </header>
 
   <main>
@@ -227,21 +302,34 @@
         <textarea id="spec" maxlength="2000" placeholder="CMOS inverter, propagation delay under 40 ps at 20 fF load"></textarea>
         <button class="go" id="go" type="submit">Verify</button>
       </div>
+      <p class="kbd">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to verify.</p>
       <div class="examples" id="examples"><span>Try:</span></div>
       <label class="trapopt" for="trap">
         <input type="checkbox" id="trap">
-        <span>Trap mode: test the verifier with a wrong design
+        <span><b>Trap mode: test the verifier with a wrong design</b>
           <small>The model is not asked for a design. A deliberately too-slow design is submitted with a false claim of success, and ngspice and the verifier must catch it. Needs a delay limit, such as the 40 ps example.</small></span>
       </label>
     </form>
 
     <div id="msg"></div>
     <div class="trapflag" id="trapflag" role="status">Trap run: the design below was planted on purpose and its claim is false. This tests the verifier. It is not a real design attempt.</div>
-    <section class="verdict" id="verdict" data-state="idle" aria-live="polite">
+    <section class="how" id="how" aria-label="How it works">
+      <h2>How it works</h2>
+      <ol>
+        <li><b>You describe it</b>Plain words: what the circuit must do, and under what load.</li>
+        <li><b>ngspice measures it</b>A design is simulated. The model's opinion is never used as proof.</li>
+        <li><b>The verifier decides</b>COMPLETE only if every requirement is measured and met.</li>
+      </ol>
+    </section>
+    <div class="sr-only" id="live" role="status" aria-live="polite" aria-atomic="true"></div>
+    <section class="verdict" id="verdict" data-state="idle">
       <div class="stamp" id="stamp">No run yet</div>
-      <div class="vtext"><strong id="vhead">Describe a circuit and press Verify.</strong><span id="vsub">The verdict appears here once ngspice has measured the design.</span></div>
+      <div class="vtext"><strong id="vhead">Describe a circuit and press Verify.</strong><span id="vsub">The verdict appears here once ngspice has measured the design.</span><span class="vkey" id="vkey" hidden></span></div>
     </section>
     <div class="bar" id="bar" hidden><i></i></div>
+    <ol class="steps" id="steps" hidden aria-label="Progress">
+      <li data-s="todo">Read requirement</li><li data-s="todo">Design</li><li data-s="todo">Simulate</li><li data-s="todo">Verdict</li>
+    </ol>
     <div class="dl" id="dl" hidden><span>Save this run as proof:</span>
       <button type="button" id="dl-md">Report (.md)</button>
       <button type="button" id="dl-json">Data (.json)</button></div>
@@ -317,14 +405,15 @@ function s(tag, props, ...kids) {
 }
 function circuitSVG(d, cond) {
   const t = (d && d.transistors) || {}, mn = t.mn || {}, mp = t.mp || {};
-  const L = (x1, y1, x2, y2) => s("line", { x1, y1, x2, y2 });
+  const L = (x1, y1, x2, y2, cls) => s("line", { x1, y1, x2, y2, class: cls });
   const T = (x, y, text, cls) => s("text", { x, y, class: cls || "" }, String(text));
   const load = cond && cond.cload_ff != null ? `${fmt(cond.cload_ff)} fF` : "load";
   const vdd = cond && cond.vdd != null ? `VDD ${fmt(cond.vdd)} V` : "VDD";
-  return s("svg", { class: "ckt", viewBox: "0 0 340 214", role: "img",
+  return s("svg", { class: "ckt", viewBox: "0 0 400 214", role: "img",
       "aria-label": `CMOS inverter: PMOS width ${um(mp.w_um)}, NMOS width ${um(mn.w_um)}, length ${um(mn.l_um)}, ${load}, ${vdd}` },
+    s("rect", { class: "bg", x: 2, y: 2, width: 396, height: 210, rx: 10 }),
     /* supply rail */
-    L(146, 22, 186, 22), T(150, 14, vdd, "strong"),
+    L(146, 22, 186, 22, "vdd"), T(150, 14, vdd, "strong vdd"),
     /* PMOS (top): gate bubble, plate, channel, source up to VDD, drain down to OUT */
     L(166, 22, 166, 56), L(146, 56, 166, 56), L(146, 52, 146, 88), L(138, 52, 138, 88),
     s("circle", { class: "b", cx: 134, cy: 70, r: 4 }), L(130, 70, 100, 70),
@@ -337,11 +426,11 @@ function circuitSVG(d, cond) {
     /* input */
     L(100, 70, 100, 150), L(60, 110, 100, 110), s("circle", { class: "dot", cx: 100, cy: 110, r: 3 }), T(34, 114, "IN", "pin"),
     /* output and load capacitor to ground */
-    s("circle", { class: "dot", cx: 166, cy: 116, r: 3 }), L(166, 116, 250, 116), T(176, 108, "OUT", "pin"),
-    L(250, 116, 250, 140), L(238, 140, 262, 140), L(238, 148, 262, 148), L(250, 148, 250, 190),
-    T(268, 148, load, "strong"),
+    s("circle", { class: "dot", cx: 166, cy: 116, r: 3 }), L(166, 116, 300, 116, "out"), T(176, 108, "OUT", "pin"),
+    L(300, 116, 300, 140), L(288, 140, 312, 140), L(288, 148, 312, 148), L(300, 148, 300, 190),
+    T(318, 148, load, "strong"),
     /* ground */
-    L(166, 190, 250, 190), L(198, 190, 198, 196), L(188, 196, 208, 196), L(192, 201, 204, 201), L(196, 206, 200, 206), T(212, 206, "GND"));
+    L(166, 190, 300, 190), L(198, 190, 198, 196), L(188, 196, 208, 196), L(192, 201, 204, 201), L(196, 206, 200, 206), T(212, 206, "GND"));
 }
 
 /* ---------- saving a run as proof ---------- */
@@ -405,17 +494,40 @@ const view = {
     this.trap = !!trap; $("trapflag").classList.toggle("on", this.trap);
     this.attempts = {}; this.text = text; this.hasReport = false; this.seen = new Set();
     this.cond = null; this.lastReport = null; $("dl").hidden = true; $("compare").replaceChildren();
+    $("how").hidden = true; $("steps").hidden = true; $("vkey").hidden = true; this.said = null;
     for (const id of ["understood", "attempts-wrap", "calls-wrap", "compare-wrap"]) $(id).hidden = true;
     $("understood-body").replaceChildren(); $("attempts").replaceChildren();
     $("run-errors").replaceChildren(); $("calls").replaceChildren(); $("msg").replaceChildren();
   },
   stop() {
     if (this.es) { this.es.close(); this.es = null; }
-    clearInterval(this.timer); this.timer = null; $("bar").hidden = true;
+    clearInterval(this.timer); this.timer = null; $("bar").hidden = true; $("steps").hidden = true;
   },
   setVerdict(state, stamp, head, sub) {
     $("verdict").dataset.state = state; $("stamp").textContent = stamp;
     $("vhead").textContent = head; $("vsub").textContent = sub || "";
+    $("vkey").hidden = true;
+    const icon = { COMPLETE: "✓", FAILED: "✕", INCOMPLETE: "!" }[state] || "";
+    $("stamp").dataset.icon = icon;
+    /* the live region speaks only when the state or headline changes, never on the per-second timer */
+    const said = state + "|" + head;
+    if (this.said !== said) { this.said = said; $("live").textContent = `${stamp}. ${head}`; }
+  },
+  /* progress through the four stages; i is the active stage, 4 means finished */
+  stage(i) {
+    const ol = $("steps"); ol.hidden = i >= 4;
+    [...ol.children].forEach((li, k) => {
+      li.dataset.s = k < i ? "done" : k === i ? "active" : "todo";
+      if (k === i) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
+    });
+  },
+  keyLine(rep) {
+    const its = rep.iterations || [];
+    if (!its.length) return;
+    const vs = (its[its.length - 1].report.verdicts || []).filter((v) => v.criterion && v.criterion.measurable && v.measured != null).slice(0, 3);
+    if (!vs.length) return;
+    $("vkey").textContent = vs.map((v) => `${v.criterion.metric} ${fmt(v.measured)} ${v.criterion.unit} (limit ${OPS[v.criterion.operator] || v.criterion.operator} ${fmt(v.criterion.threshold)} ${v.criterion.unit}): ${v.verdict}`).join("   ");
+    $("vkey").hidden = false;
   },
   running(label) {
     this.setVerdict("running", "Checking", label || "Working on it", "");
@@ -429,11 +541,11 @@ const view = {
 
   apply(ev) {
     switch (ev.type) {
-      case "started": this.started = Date.now(); this.running("Reading your requirement"); break;
-      case "intent": this.showIntent(ev); this.running("Designing and simulating"); break;
+      case "started": this.started = Date.now(); this.running("Reading your requirement"); this.stage(0); break;
+      case "intent": this.showIntent(ev); this.running("Designing and simulating"); this.stage(1); break;
       case "conditions": this.showConditions(ev); break;
-      case "design": this.showDesign(ev); break;
-      case "iteration": this.showIteration(ev); break;
+      case "design": this.showDesign(ev); this.stage(2); break;
+      case "iteration": this.showIteration(ev); this.stage(3); break;
       case "error": this.showError(ev); break;
       case "warning": this.note(ev.message, true); break;
       case "done": break;
@@ -586,6 +698,7 @@ const view = {
       heads.COMPLETE = "The planted design happened to meet the spec in simulation, so nothing was caught.";
     }
     this.setVerdict(status, status, heads[status] || "", `${iters} ${iters === 1 ? "attempt" : "attempts"}, ${calls.length} model ${calls.length === 1 ? "call" : "calls"}, ${secs.toFixed(0)} s of model time`);
+    this.keyLine(rep); this.stage(4);
     this.showCalls(calls);
     this.showCompare(rep);
     this.lastReport = rep; $("dl").hidden = false;
@@ -652,6 +765,7 @@ const view = {
 
 /* ---------- talking to the server ---------- */
 const form = $("form"), go = $("go"), spec = $("spec");
+function busy(on) { go.disabled = on; go.textContent = on ? "Checking…" : "Verify"; }
 
 function problem(text) { $("msg").replaceChildren(h("div", { class: "err" }, text)); }
 function offline() {
@@ -660,14 +774,14 @@ function offline() {
 
 async function start(text) {
   const trap = $("trap").checked;
-  view.reset(text, trap); go.disabled = true;
+  view.reset(text, trap); busy(true);
   view.started = 0; view.running("Sending your requirement");
   let res;
   try {
     res = await fetch(API + "/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, trap }) });
-  } catch (e) { go.disabled = false; view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", ""); offline(); return; }
+  } catch (e) { busy(false); view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", ""); offline(); return; }
   if (!res.ok) {
-    go.disabled = false; view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", "");
+    busy(false); view.stop(); view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", "");
     problem(res.status === 422 ? "The requirement must be between 1 and 2000 characters." : `The server refused the request (${res.status}).`); return;
   }
   const { run_id } = await res.json();
@@ -678,7 +792,7 @@ function follow(runId) {
   view.runId = runId;
   const es = new EventSource(`${API}/api/runs/${runId}/events`);
   view.es = es;
-  const finish = () => { es.close(); if (view.es === es) view.es = null; go.disabled = false; refreshHistory(); };
+  const finish = () => { es.close(); if (view.es === es) view.es = null; busy(false); refreshHistory(); };
   es.onmessage = (m) => {
     if (view.runId !== runId || view.seen.has(m.lastEventId)) return;
     view.seen.add(m.lastEventId);
@@ -715,19 +829,38 @@ async function refreshHistory() {
 }
 
 async function openRun(row) {
-  view.reset(row.text, row.trap); spec.value = row.text; $("trap").checked = !!row.trap; go.disabled = true; view.runId = row.run_id;
+  view.reset(row.text, row.trap); spec.value = row.text; $("trap").checked = !!row.trap; busy(true); view.runId = row.run_id;
   let data;
   try { const r = await fetch(`${API}/api/runs/${row.run_id}`); if (!r.ok) throw 0; data = await r.json(); }
-  catch (e) { go.disabled = false; problem("Could not load that run."); return; }
-  go.disabled = false;
+  catch (e) { busy(false); problem("Could not load that run."); return; }
+  busy(false);
   view.started = 0;
   if (data.events && data.events.length) {
     for (const ev of data.events) view.apply(ev);
-    if (!data.report && data.status !== "done" && data.status !== "error") { go.disabled = true; follow(row.run_id); }
+    if (!data.report && data.status !== "done" && data.status !== "error") { busy(true); follow(row.run_id); }
   } else if (data.report) view.fromReport(data.report, data.text);
   else view.setVerdict("none", "No verdict", "This run has no saved result.", "");
   refreshHistory();
 }
+
+/* theme: automatic (follows the system), light, or dark; remembered when the browser allows it */
+(function () {
+  const order = ["auto", "light", "dark"], names = { auto: "Auto", light: "Light", dark: "Dark" };
+  let mode = "auto";
+  try { const v = localStorage.getItem("s2c-theme"); if (order.includes(v)) mode = v; } catch (e) {}
+  const btn = $("theme");
+  function apply() {
+    if (mode === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = mode;
+    btn.textContent = "Theme: " + names[mode];
+    btn.setAttribute("aria-label", `Colour theme: ${names[mode].toLowerCase()}. Press to change.`);
+  }
+  btn.addEventListener("click", () => {
+    mode = order[(order.indexOf(mode) + 1) % order.length];
+    try { localStorage.setItem("s2c-theme", mode); } catch (e) {}
+    apply();
+  });
+  apply();
+})();
 
 view.setVerdict("idle", "No run yet", "Describe a circuit and press Verify.", "The verdict appears here once ngspice has measured the design.");
 refreshHistory();

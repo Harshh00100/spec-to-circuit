@@ -173,6 +173,7 @@ API: `GET /api/health`, `POST /api/runs` (`{"text": "...", "trap": false}`), `GE
 - **Hosted models untested.** The client is built for OpenAI-compatible endpoints, but only local Ollama has been run.
 - **History is partial.** A reopened past run shows its report, but not the netlist or the load and supply labels on the diagram (those exist only in live events).
 - **Trap mode** covers delay limits only (`<`, `<=`), and stops after one attempt.
+- **Web fonts need internet.** The page loads Space Grotesk, IBM Plex Sans and JetBrains Mono from Google Fonts, so your browser makes a request to Google when you open it. Offline, it falls back to system fonts and works the same.
 - **Single user, local only.** One run at a time, no login. Keep it bound to `127.0.0.1`; do not expose it to a network.
 - **Page tested lightly:** the page was tested in headless Chromium against recorded events and on one PC. The circuit drawing and results table have had less testing than the rest.
 
